@@ -140,6 +140,8 @@ This project strengthened my understanding of clean architecture and production-
 
 ## 📸 Screenshots
 
-| Dashboard | Assignments | Timer |
-|-----------|-------------|-------|
-| ![](assets/screenshots/dashboard.png) | ![](assets/screenshots/assignment.png) | ![](assets/screenshots/timer.png) |
+<p align="center">
+  <img src="assets/screenshots/dashboard.png" width="250"/>
+  <img src="assets/screenshots/assignment.png" width="250"/>
+  <img src="assets/screenshots/timer.png" width="250"/>
+</p>
