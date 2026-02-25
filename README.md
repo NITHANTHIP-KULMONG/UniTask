@@ -55,11 +55,11 @@ This project demonstrates:
 
 ```text
 lib/
-└── features/
-    ├── dashboard/
-    ├── assignments/
-    ├── timer/
-    └── subjects/
+├── features/
+│   ├── dashboard/
+│   ├── assignments/
+│   ├── timer/
+│   └── subjects/
 ├── app.dart
 └── main.dart
 
