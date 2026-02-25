@@ -1,16 +1,119 @@
-# unitask
+# 🎓 UniTask
 
-A new Flutter project.
+> A productivity-focused Flutter application designed to help students manage assignments, track study sessions, and prioritize tasks efficiently.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 📌 Project Overview
 
-A few resources to get you started if this is your first Flutter project:
+UniTask is an Android-first Flutter application built with a modular, feature-based architecture.  
+It focuses on task prioritization, structured study tracking, and clean UI design for student productivity.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+This project demonstrates:
+- State management using Riverpod
+- Clean architecture separation
+- Idempotent timer logic (no duplicate sessions)
+- Persistent local storage
+- Production-safe test and build setup
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+# 🚀 Features
+
+## 📊 Dashboard
+- Upcoming assignments overview
+- Today's focus summary
+- Timer session statistics
+
+## ✅ Assignments
+- Create, edit, delete tasks
+- Automatic priority score calculation
+- Priority badge (High / Medium / Low)
+- Subject tagging
+
+## ⏱️ Study Timer
+- Start / Pause / Resume / Stop
+- Automatic session persistence
+- Idempotent stop logic (prevents duplicate saves)
+
+## 📚 Subjects
+- Create and manage subjects
+- Link assignments and timer sessions to subjects
+
+---
+
+# 🛠️ Tech Stack
+
+- Flutter (Android-first)
+- Riverpod (State Management)
+- Shared Preferences (Local Persistence)
+- Material 3 UI
+
+---
+
+# 🧠 Architecture
+
+
+lib/
+├── features/
+│ ├── dashboard/
+│ ├── assignments/
+│ ├── timer/
+│ └── subjects/
+├── app.dart
+└── main.dart
+
+
+Architecture principles:
+- Feature-based modular structure
+- Presentation / Domain / Data separation
+- StateNotifier + AsyncValue pattern
+
+---
+
+# ▶️ How to Run
+
+Install dependencies:
+
+
+flutter pub get
+
+
+Run the app:
+
+
+flutter run
+
+
+Run tests:
+
+
+flutter test
+
+
+---
+
+# 📱 Build APK
+
+
+flutter build apk --release
+
+
+Output location:
+
+
+build/app/outputs/flutter-apk/app-release.apk
+
+
+---
+
+# 👤 Author
+
+Nithanthip Kulmong  
+Mae Fah Luang University  
+
+---
+
+# 📄 License
+
+Educational use only.
