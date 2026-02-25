@@ -117,3 +117,29 @@ Mae Fah Luang University
 # 📄 License
 
 Educational use only.
+
+---
+
+# 🧠 Reflection
+
+During the development of UniTask, I learned:
+
+- How to structure a Flutter application using feature-based architecture
+- Practical usage of Riverpod for state management
+- Designing idempotent logic to prevent duplicate data (Timer stop logic)
+- Managing local persistence safely using SharedPreferences
+- Handling Git rebase conflicts and maintaining a clean repository
+
+If extended further, I would:
+- Integrate Firebase for cloud sync
+- Add authentication
+- Implement data backup & restore
+- Add analytics dashboard
+
+This project strengthened my understanding of clean architecture and production-ready Flutter development.
+
+## 📸 Screenshots
+
+| Dashboard | Assignments | Timer |
+|-----------|-------------|-------|
+| ![](assets/screenshots/dashboard.png) | ![](assets/screenshots/assignment.png) | ![](assets/screenshots/timer.png) |
