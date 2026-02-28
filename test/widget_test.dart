@@ -11,7 +11,7 @@ void main() {
     }
   }
 
-  Finder _homeShellScaffoldFinder() {
+  Finder homeShellScaffoldFinder() {
     // Anchor from the single bottom NavigationBar, then grab its nearest Scaffold ancestor.
     final navBar = find.byType(NavigationBar);
     expect(navBar, findsOneWidget);
@@ -27,7 +27,7 @@ void main() {
   }
 
   void expectHomeShellAppBarTitle(WidgetTester tester, String title) {
-    final homeScaffold = _homeShellScaffoldFinder();
+    final homeScaffold = homeShellScaffoldFinder();
 
     final appBar = find.descendant(
       of: homeScaffold,

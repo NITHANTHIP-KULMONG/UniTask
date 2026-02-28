@@ -1,4 +1,4 @@
-package com.example.unitask
+package com.nithanthip.unitask
 
 import io.flutter.embedding.android.FlutterActivity
 

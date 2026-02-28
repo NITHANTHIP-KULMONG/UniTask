@@ -1,0 +1,104 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper: check if the requester is an admin ──
+    function isAdmin() {
+      return request.auth != null
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    // ────────────────────────────────────────────────
+    //  Users collection
+    // ────────────────────────────────────────────────
+    match /users/{userId} {
+      // Any authenticated user can read their own document.
+      // Admins can read ALL user documents.
+      allow read: if request.auth != null
+                  && (request.auth.uid == userId || isAdmin());
+
+      // First login: create own doc, but role MUST be "user".
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.role == "user";
+
+      // Users can update own doc, but cannot change their role.
+      // Admins can update any doc (e.g. to change roles).
+      allow update: if request.auth != null
+                    && (
+                      // Self-update: role must stay the same (no escalation).
+                      (request.auth.uid == userId
+                       && request.resource.data.role == resource.data.role)
+                      // Admin can update any user doc (role changes, etc.).
+                      || isAdmin()
+                    );
+
+      // Users can delete their own doc (account deletion).
+      allow delete: if request.auth != null
+                    && request.auth.uid == userId;
+    }
+
+    // ────────────────────────────────────────────────
+    //  Tasks collection
+    // ────────────────────────────────────────────────
+    match /tasks/{taskId} {
+      // Users can read their own tasks. Admins can read all.
+      allow read: if request.auth != null
+                  && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      // Users can create tasks that belong to themselves.
+      allow create: if request.auth != null
+                    && request.resource.data.ownerId == request.auth.uid;
+
+      // Users can update / delete only their own tasks.
+      allow update, delete: if request.auth != null
+                            && resource.data.ownerId == request.auth.uid;
+    }
+
+    // ────────────────────────────────────────────────
+    //  Subjects collection
+    // ────────────────────────────────────────────────
+    match /subjects/{subjectId} {
+      // Users can read their own subjects. Admins can read all.
+      allow read: if request.auth != null
+                  && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      // Users can create subjects that belong to themselves.
+      allow create: if request.auth != null
+                    && request.resource.data.ownerId == request.auth.uid;
+
+      // Users can update / delete only their own subjects.
+      allow update, delete: if request.auth != null
+                            && resource.data.ownerId == request.auth.uid;
+    }
+
+    // ────────────────────────────────────────────────
+    //  Sessions collection (Pomodoro study sessions)
+    // ────────────────────────────────────────────────
+    match /sessions/{sessionId} {
+      allow read: if request.auth != null
+                  && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      allow create: if request.auth != null
+                    && request.resource.data.ownerId == request.auth.uid;
+
+      allow update, delete: if request.auth != null
+                            && resource.data.ownerId == request.auth.uid;
+    }
+
+    // ────────────────────────────────────────────────
+    //  Assignments collection
+    // ────────────────────────────────────────────────
+    match /assignments/{assignmentId} {
+      allow read: if request.auth != null
+                  && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      allow create: if request.auth != null
+                    && request.resource.data.ownerId == request.auth.uid;
+
+      allow update, delete: if request.auth != null
+                            && resource.data.ownerId == request.auth.uid;
+    }
+  }
+}

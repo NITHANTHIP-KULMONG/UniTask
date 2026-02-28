@@ -19,8 +19,8 @@ class AssignmentsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final assignmentsState = ref.watch(assignmentControllerProvider);
-    final subjectsState = ref.watch(subjectControllerProvider);
+    final assignmentsAsync = ref.watch(userAssignmentsProvider);
+    final subjectsState = ref.watch(userSubjectsProvider);
 
     final subjects = subjectsState.valueOrNull ?? const <Subject>[];
     final subjectNameById = <String, String>{
@@ -30,41 +30,23 @@ class AssignmentsScreen extends ConsumerWidget {
     final currentView = ref.watch(taskViewProvider);
     final selectedSubjectId = ref.watch(taskSubjectFilterProvider);
     final query = ref.watch(taskSearchQueryProvider);
-    final totalCount = assignmentsState.valueOrNull?.length ?? 0;
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Assignments'),
-            const SizedBox(width: 8),
-            Text(
-              '$totalCount',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(assignmentControllerProvider.notifier).load(),
-          ),
-        ],
+        title: const Text('Assignments'),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _openAddSheet(context),
         child: const Icon(Icons.add),
       ),
-      body: assignmentsState.when(
+      body: assignmentsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErrorView(
           message: e.toString(),
-          onRetry: () => ref.read(assignmentControllerProvider.notifier).load(),
+          onRetry: () => ref.invalidate(userAssignmentsProvider),
         ),
         data: (items) {
+          final totalCount = items.length;
           final filtered = _filterAndSort(
             items: items,
             subjectNameById: subjectNameById,
@@ -255,8 +237,8 @@ class _AssignmentTile extends ConsumerWidget {
         leading: Checkbox(
           value: assignment.isDone,
           onChanged: (_) => ref
-              .read(assignmentControllerProvider.notifier)
-              .toggleDone(assignment.id),
+              .read(assignmentControllerProvider)
+              .toggleDone(assignment.id, assignment.isDone),
         ),
         title: Text(
           assignment.title,
@@ -287,7 +269,7 @@ class _AssignmentTile extends ConsumerWidget {
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline),
           onPressed: () {
-            ref.read(assignmentControllerProvider.notifier).deleteById(assignment.id);
+            ref.read(assignmentControllerProvider).deleteById(assignment.id);
           },
         ),
       ),

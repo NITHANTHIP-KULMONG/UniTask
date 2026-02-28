@@ -102,7 +102,10 @@ class TimerRunController extends StateNotifier<TimerRunState> {
       selectedSubject: Subject(
         id: subjectId,
         name: name,
+        ownerId: '',
+        color: SubjectColor.indigo,
         createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+        updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
       ),
     );
   }

@@ -1,12 +1,15 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.14-bin.zip
+
+// ...existing code...
 android {
-    namespace = "com.example.unitask"
+    namespace = "com.nithanthip.unitask"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +24,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.unitask"
+        applicationId = "com.nithanthip.unitask"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -42,3 +45,7 @@ android {
 flutter {
     source = "../.."
 }
+
+rmdir /s /q "C:\Users\Lenovo\AppData\Roaming\Code\User\globalStorage\redhat.java"
+
+gradle clean build

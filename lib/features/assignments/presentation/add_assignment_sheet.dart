@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../dashboard/presentation/home_shell.dart';
+import '../../auth/services/auth_service.dart';
+import '../../tasks/presentation/user_home_page.dart';
 import '../../subjects/domain/subject.dart';
 import '../../subjects/presentation/subject_controller.dart';
 import '../domain/assignment.dart';
@@ -43,12 +44,6 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
     setState(() => _dueDate = DateTime(picked.year, picked.month, picked.day));
   }
 
-  String _newId() {
-    final ts = DateTime.now().microsecondsSinceEpoch;
-    final r = (ts % 100000).toString().padLeft(5, '0');
-    return 'a_$ts$r';
-  }
-
   Future<void> _submit() async {
     final title = _titleCtrl.text.trim();
     final weight = double.tryParse(_weightCtrl.text.trim());
@@ -72,11 +67,15 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
       return;
     }
 
+    final uid = ref.read(authServiceProvider).currentUser?.uid;
+    if (uid == null) return;
+
     setState(() => _saving = true);
     try {
       final now = DateTime.now();
       final assignment = Assignment(
-        id: _newId(),
+        id: '',  // Firestore auto-generates the ID
+        ownerId: uid,
         subjectId: _selectedSubject!.id,
         title: title,
         dueDate: _dueDate,
@@ -85,9 +84,20 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
         createdAt: now,
       );
 
-      await ref.read(assignmentControllerProvider.notifier).add(assignment);
+      await ref.read(assignmentControllerProvider).add(assignment);
 
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Assignment created')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create assignment: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -95,7 +105,7 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final subjectsState = ref.watch(subjectControllerProvider);
+    final subjectsState = ref.watch(userSubjectsProvider);
     final subjects = subjectsState.valueOrNull ?? <Subject>[];
     if (_selectedSubject == null && subjects.isNotEmpty) {
       _selectedSubject = subjects.first;
@@ -130,7 +140,7 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    ref.read(selectedTabIndexProvider.notifier).state = 3;
+                    ref.read(selectedTabIndexProvider.notifier).state = 2;
                   },
                   child: const Text('Create subject'),
                 ),
@@ -148,7 +158,7 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<Subject>(
-            initialValue: _selectedSubject,
+            value: _selectedSubject,
             items: subjects
                 .map(
                   (subject) => DropdownMenuItem<Subject>(

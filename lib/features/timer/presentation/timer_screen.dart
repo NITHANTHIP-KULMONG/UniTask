@@ -1,11 +1,14 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../dashboard/presentation/home_shell.dart';
 import '../../subjects/domain/subject.dart';
 import '../../subjects/presentation/subject_controller.dart';
-import '../domain/timer_session.dart';
-import 'timer_controller.dart';
+import '../../tasks/presentation/user_home_page.dart';
+import '../domain/pomodoro_preferences.dart';
+import '../services/study_session_service.dart';
+import 'pomodoro_controller.dart';
 import 'timer_history_screen.dart';
 
 class TimerScreen extends ConsumerWidget {
@@ -13,54 +16,80 @@ class TimerScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final subjectsState = ref.watch(subjectControllerProvider);
-    final sessionsState = ref.watch(timerSessionsProvider);
-    final runState = ref.watch(timerRunProvider);
-    final runController = ref.read(timerRunProvider.notifier);
+    final subjectsAsync = ref.watch(userSubjectsProvider);
+    final pomo = ref.watch(pomodoroProvider);
+    final pomoCtrl = ref.read(pomodoroProvider.notifier);
+    final prefs = ref.watch(pomodoroPrefsProvider);
+    final dailySeconds = ref.watch(dailyStudySecondsProvider);
+    final dailyPomodoros = ref.watch(dailyPomodoroCountProvider);
 
-    final subjects = subjectsState.valueOrNull ?? const <Subject>[];
+    final subjects = subjectsAsync.valueOrNull ?? const <Subject>[];
     final hasSubjects = subjects.isNotEmpty;
-    final selectedId = runState.selectedSubject?.id;
-    final dropdownValue = subjects.any((s) => s.id == selectedId) ? selectedId : null;
+    final selectedId = pomo.selectedSubject?.id;
+    final dropdownValue =
+        subjects.any((s) => s.id == selectedId) ? selectedId : null;
 
-    final canStart = hasSubjects && !runState.isRunning && dropdownValue != null;
-    final canPause = hasSubjects && runState.isRunning && !runState.isPaused;
-    final canResume = hasSubjects && runState.isRunning && runState.isPaused;
-    final canStop = hasSubjects && runState.isRunning;
-
-    final subjectNameById = <String, String>{
-      for (final s in subjects) s.id: s.name,
-    };
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Timer'),
+        title: const Text('Pomodoro Timer'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Settings',
+            onPressed: () => _showPrefsDialog(context, ref),
+          ),
+          IconButton(
             icon: const Icon(Icons.history),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const TimerHistoryScreen(),
-                ),
-              );
-            },
+            tooltip: 'History',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const TimerHistoryScreen()),
+            ),
           ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(
-            'Focused study sessions',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+          // ── Daily summary card ───────────────────────────────
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(Icons.local_fire_department,
+                      color: cs.primary, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Today',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        Text(
+                          '$dailyPomodoros pomodoros • ${_fmtDuration(dailySeconds)}',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 12),
+
+          // ── Subject selector ─────────────────────────────────
           if (!hasSubjects) ...[
             _AddSubjectCard(
-              onTap: () => ref.read(selectedTabIndexProvider.notifier).state = 3,
+              onTap: () =>
+                  ref.read(selectedTabIndexProvider.notifier).state = 2,
             ),
             const SizedBox(height: 12),
           ] else ...[
@@ -70,194 +99,247 @@ class TimerScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Subject',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                    Text('Subject',
+                        style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      initialValue: dropdownValue,
+                      value: dropdownValue,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         isDense: true,
                       ),
                       items: subjects
-                          .map(
-                            (subject) => DropdownMenuItem<String>(
-                              value: subject.id,
-                              child: Text(
-                                subject.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                          .toList(growable: false),
-                      onChanged: (id) {
-                        if (id == null) return;
-                        runController.selectSubject(id);
-                      },
+                          .map((s) => DropdownMenuItem(
+                                value: s.id,
+                                child: Text(s.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis),
+                              ))
+                          .toList(),
+                      onChanged: pomo.isActive
+                          ? null
+                          : (id) {
+                              if (id == null) return;
+                              final subj =
+                                  subjects.firstWhere((s) => s.id == id);
+                              pomoCtrl.selectSubject(subj);
+                            },
                     ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
           ],
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      _formatElapsed(runState.elapsedSeconds),
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _statusText(runState),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (!runState.isRunning)
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: canStart ? runController.start : null,
-                        icon: const Icon(Icons.play_arrow_rounded),
-                        label: const Text('Start'),
+
+          // ── Circular countdown ───────────────────────────────
+          Center(
+            child: SizedBox(
+              width: 240,
+              height: 240,
+              child: CustomPaint(
+                painter: _RingPainter(
+                  progress: pomo.progress,
+                  ringColor: _phaseColor(pomo.phase, cs),
+                  trackColor: cs.surfaceContainerHighest,
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _fmtCountdown(pomo.remainingSeconds),
+                        style: Theme.of(context)
+                            .textTheme
+                            .displayMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
-                    ),
-                  if (runState.isRunning && !runState.isPaused)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton.tonalIcon(
-                            onPressed: canPause ? runController.pause : null,
-                            icon: const Icon(Icons.pause_rounded),
-                            label: const Text('Pause'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: canStop ? runController.stopAndSave : null,
-                            icon: const Icon(Icons.stop_rounded),
-                            label: const Text('Stop'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  if (runState.isRunning && runState.isPaused)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: canResume ? runController.resume : null,
-                            icon: const Icon(Icons.play_arrow_rounded),
-                            label: const Text('Resume'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: FilledButton.tonalIcon(
-                            onPressed: canStop ? runController.stopAndSave : null,
-                            icon: const Icon(Icons.stop_rounded),
-                            label: const Text('Stop'),
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
+                      const SizedBox(height: 4),
+                      Text(
+                        _phaseLabel(pomo),
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleSmall
+                            ?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // ── Pomodoro dots ────────────────────────────────────
+          Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(
+                prefs.sessionsBeforeLongBreak,
+                (i) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(
+                    i < pomo.completedPomodoros
+                        ? Icons.circle
+                        : Icons.circle_outlined,
+                    size: 14,
+                    color: i < pomo.completedPomodoros
+                        ? cs.primary
+                        : cs.outlineVariant,
+                  ),
+                ),
               ),
             ),
           ),
           const SizedBox(height: 20),
-          Text(
-            'Recent sessions',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          sessionsState.when(
-            loading: () => const Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ),
-            error: (e, _) => Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      e.toString(),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    FilledButton(
-                      onPressed: () => ref.read(timerSessionsProvider.notifier).load(),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            data: (sessions) {
-              if (sessions.isEmpty) {
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.timer_off_outlined,
-                          size: 42,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'No sessions yet',
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Start a timer to create your first session.',
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
 
-              final recent = sessions.take(4).toList(growable: false);
-              return Card(
-                child: Column(
-                  children: [
-                    for (var i = 0; i < recent.length; i++) ...[
-                      _RecentSessionTile(
-                        session: recent[i],
-                        subjectName:
-                            subjectNameById[recent[i].subjectId] ?? 'Unknown subject',
-                      ),
-                      if (i != recent.length - 1) const Divider(height: 1),
-                    ],
-                  ],
+          // ── Control buttons ──────────────────────────────────
+          _buildControls(context, pomo, pomoCtrl, hasSubjects, dropdownValue),
+        ],
+      ),
+    );
+  }
+
+  // ── Controls builder ──────────────────────────────────────────────
+
+  Widget _buildControls(
+    BuildContext context,
+    PomodoroState pomo,
+    PomodoroController ctrl,
+    bool hasSubjects,
+    String? dropdownValue,
+  ) {
+    if (!pomo.isActive) {
+      // Idle → Start
+      return SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed:
+              hasSubjects && dropdownValue != null ? ctrl.start : null,
+          icon: const Icon(Icons.play_arrow_rounded),
+          label: const Text('Start Focus'),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        // Pause / Resume
+        Expanded(
+          child: pomo.isPaused
+              ? FilledButton.icon(
+                  onPressed: ctrl.resume,
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('Resume'),
+                )
+              : FilledButton.tonalIcon(
+                  onPressed: ctrl.pause,
+                  icon: const Icon(Icons.pause_rounded),
+                  label: const Text('Pause'),
                 ),
+        ),
+        const SizedBox(width: 10),
+
+        // Skip (during breaks)
+        if (!pomo.isWorkPhase)
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: ctrl.skip,
+              icon: const Icon(Icons.skip_next_rounded),
+              label: const Text('Skip'),
+            ),
+          ),
+        if (!pomo.isWorkPhase) const SizedBox(width: 10),
+
+        // Reset
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: ctrl.reset,
+            icon: const Icon(Icons.stop_rounded),
+            label: const Text('Reset'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Preferences dialog ────────────────────────────────────────────
+
+  void _showPrefsDialog(BuildContext context, WidgetRef ref) {
+    final prefs = ref.read(pomodoroPrefsProvider);
+    final workCtrl =
+        TextEditingController(text: prefs.workMinutes.toString());
+    final shortCtrl =
+        TextEditingController(text: prefs.shortBreakMinutes.toString());
+    final longCtrl =
+        TextEditingController(text: prefs.longBreakMinutes.toString());
+    final roundsCtrl = TextEditingController(
+        text: prefs.sessionsBeforeLongBreak.toString());
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Timer Settings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: workCtrl,
+              decoration: const InputDecoration(
+                  labelText: 'Work (min)', border: OutlineInputBorder()),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: shortCtrl,
+              decoration: const InputDecoration(
+                  labelText: 'Short break (min)',
+                  border: OutlineInputBorder()),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: longCtrl,
+              decoration: const InputDecoration(
+                  labelText: 'Long break (min)',
+                  border: OutlineInputBorder()),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: roundsCtrl,
+              decoration: const InputDecoration(
+                  labelText: 'Rounds before long break',
+                  border: OutlineInputBorder()),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              final w = int.tryParse(workCtrl.text) ?? 25;
+              final s = int.tryParse(shortCtrl.text) ?? 5;
+              final l = int.tryParse(longCtrl.text) ?? 15;
+              final r = int.tryParse(roundsCtrl.text) ?? 4;
+
+              ref.read(pomodoroPrefsProvider.notifier).state =
+                  PomodoroPreferences(
+                workMinutes: w.clamp(1, 120),
+                shortBreakMinutes: s.clamp(1, 60),
+                longBreakMinutes: l.clamp(1, 60),
+                sessionsBeforeLongBreak: r.clamp(1, 12),
               );
+              Navigator.pop(ctx);
             },
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -265,9 +347,12 @@ class TimerScreen extends ConsumerWidget {
   }
 }
 
+// =============================================================================
+// Internal widgets
+// =============================================================================
+
 class _AddSubjectCard extends StatelessWidget {
   const _AddSubjectCard({required this.onTap});
-
   final VoidCallback onTap;
 
   @override
@@ -277,30 +362,25 @@ class _AddSubjectCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            Icon(
-              Icons.school_outlined,
-              size: 42,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+            Icon(Icons.school_outlined,
+                size: 42,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
             const SizedBox(height: 10),
-            Text(
-              'Add a subject first',
-              style: Theme.of(context).textTheme.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
+            Text('Add a subject first',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center),
             const SizedBox(height: 6),
             Text(
               'Timer sessions must be linked to a subject.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 14),
-            FilledButton(
-              onPressed: onTap,
-              child: const Text('Add Subject'),
-            ),
+            FilledButton(onPressed: onTap, child: const Text('Add Subject')),
           ],
         ),
       ),
@@ -308,71 +388,96 @@ class _AddSubjectCard extends StatelessWidget {
   }
 }
 
-class _RecentSessionTile extends StatelessWidget {
-  const _RecentSessionTile({
-    required this.session,
-    required this.subjectName,
+/// Paints a circular progress ring.
+class _RingPainter extends CustomPainter {
+  _RingPainter({
+    required this.progress,
+    required this.ringColor,
+    required this.trackColor,
   });
 
-  final TimerSession session;
-  final String subjectName;
+  final double progress;
+  final Color ringColor;
+  final Color trackColor;
 
   @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.timer_outlined),
-      title: Text(subjectName),
-      subtitle: Text(_formatDateTime(session.startAt)),
-      trailing: Text(
-        _formatElapsed(session.durationSeconds),
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-      ),
+  void paint(Canvas canvas, Size size) {
+    final strokeWidth = 10.0;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (math.min(size.width, size.height) - strokeWidth) / 2;
+
+    // Track
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..color = trackColor,
     );
+
+    // Progress arc
+    if (progress > 0) {
+      final rect = Rect.fromCircle(center: center, radius: radius);
+      canvas.drawArc(
+        rect,
+        -math.pi / 2,
+        2 * math.pi * progress,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.round
+          ..color = ringColor,
+      );
+    }
   }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter old) =>
+      old.progress != progress ||
+      old.ringColor != ringColor ||
+      old.trackColor != trackColor;
 }
 
-String _statusText(TimerRunState state) {
-  if (state.isRunning && state.isPaused) return 'Paused';
-  if (state.isRunning) return 'Running';
-  return 'Ready';
+// =============================================================================
+// Helpers
+// =============================================================================
+
+Color _phaseColor(PomodoroPhase phase, ColorScheme cs) {
+  return switch (phase) {
+    PomodoroPhase.idle => cs.outline,
+    PomodoroPhase.work => cs.primary,
+    PomodoroPhase.shortBreak => cs.tertiary,
+    PomodoroPhase.longBreak => cs.secondary,
+  };
 }
 
-String _formatElapsed(int seconds) {
-  final s = seconds < 0 ? 0 : seconds;
-  final h = s ~/ 3600;
-  final m = (s % 3600) ~/ 60;
+String _phaseLabel(PomodoroState state) {
+  if (!state.isActive) return 'Ready';
+  if (state.isPaused) return 'Paused';
+  return state.phase == PomodoroPhase.work
+      ? 'Focus Time'
+      : state.phase == PomodoroPhase.shortBreak
+          ? 'Short Break'
+          : 'Long Break';
+}
+
+String _fmtCountdown(int seconds) {
+  final s = seconds.clamp(0, 99999);
+  final m = s ~/ 60;
   final sec = s % 60;
-
-  if (h > 0) {
-    return '${h.toString().padLeft(2, '0')}:'
-        '${m.toString().padLeft(2, '0')}:'
-        '${sec.toString().padLeft(2, '0')}';
-  }
   return '${m.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
 }
 
-String _formatDateTime(DateTime dt) {
-  const months = <String>[
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-
-  final month = months[dt.month - 1];
-  final day = dt.day.toString().padLeft(2, '0');
-  final hour = dt.hour.toString().padLeft(2, '0');
-  final minute = dt.minute.toString().padLeft(2, '0');
-  return '$month $day, ${dt.year} • $hour:$minute';
+String _fmtDuration(int totalSeconds) {
+  final safe = totalSeconds.clamp(0, 999999);
+  final h = safe ~/ 3600;
+  final m = (safe % 3600) ~/ 60;
+  final s = safe % 60;
+  if (h > 0) {
+    return '${h}h ${m.toString().padLeft(2, '0')}m';
+  }
+  return '${m}m ${s.toString().padLeft(2, '0')}s';
 }
 

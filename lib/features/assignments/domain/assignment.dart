@@ -1,5 +1,8 @@
-﻿class Assignment {
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
+
+class Assignment {
   final String id;
+  final String ownerId;
   final String subjectId;
   final String title;
   final DateTime dueDate;
@@ -9,6 +12,7 @@
 
   const Assignment({
     required this.id,
+    required this.ownerId,
     required this.subjectId,
     required this.title,
     required this.dueDate,
@@ -21,6 +25,7 @@
 
   Assignment copyWith({
     String? id,
+    String? ownerId,
     String? subjectId,
     String? title,
     DateTime? dueDate,
@@ -30,6 +35,7 @@
   }) {
     return Assignment(
       id: id ?? this.id,
+      ownerId: ownerId ?? this.ownerId,
       subjectId: subjectId ?? this.subjectId,
       title: title ?? this.title,
       dueDate: dueDate ?? this.dueDate,
@@ -39,27 +45,33 @@
     );
   }
 
-  Map<String, dynamic> toJson() {
+  // ---------------------------------------------------------------------------
+  // Firestore serialization
+  // ---------------------------------------------------------------------------
+
+  Map<String, dynamic> toFirestore() {
     return {
-      'id': id,
+      'ownerId': ownerId,
       'subjectId': subjectId,
       'title': title,
-      'dueDate': dueDate.toIso8601String(),
+      'dueDate': Timestamp.fromDate(dueDate),
       'weightPercent': weightPercent,
       'isDone': isDone,
-      'createdAt': createdAt.toIso8601String(),
+      'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 
-  factory Assignment.fromJson(Map<String, dynamic> json) {
+  factory Assignment.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final d = doc.data()!;
     return Assignment(
-      id: json['id'] as String,
-      subjectId: json['subjectId'] as String,
-      title: json['title'] as String,
-      dueDate: DateTime.parse(json['dueDate'] as String),
-      weightPercent: (json['weightPercent'] as num).toDouble(),
-      isDone: json['isDone'] as bool,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      id: doc.id,
+      ownerId: d['ownerId'] as String? ?? '',
+      subjectId: d['subjectId'] as String? ?? '',
+      title: d['title'] as String? ?? '',
+      dueDate: (d['dueDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      weightPercent: (d['weightPercent'] as num?)?.toDouble() ?? 0,
+      isDone: d['isDone'] as bool? ?? false,
+      createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 
@@ -68,6 +80,7 @@
     if (identical(this, other)) return true;
     return other is Assignment &&
         other.id == id &&
+        other.ownerId == ownerId &&
         other.subjectId == subjectId &&
         other.title == title &&
         other.dueDate == dueDate &&
@@ -79,6 +92,7 @@
   @override
   int get hashCode => Object.hash(
         id,
+        ownerId,
         subjectId,
         title,
         dueDate,
