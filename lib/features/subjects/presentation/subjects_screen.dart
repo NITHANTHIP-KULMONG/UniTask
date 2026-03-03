@@ -17,6 +17,7 @@ class SubjectsScreen extends ConsumerWidget {
         title: const Text('Subjects'),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'subjectsFab',
         onPressed: () => _openAddDialog(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('New Subject'),

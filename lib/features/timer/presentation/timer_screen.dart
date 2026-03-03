@@ -1,10 +1,12 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../subjects/domain/subject.dart';
 import '../../subjects/presentation/subject_controller.dart';
+import '../../subjects/presentation/subjects_screen.dart';
 import '../../tasks/presentation/user_home_page.dart';
 import '../domain/pomodoro_preferences.dart';
 import '../services/study_session_service.dart';
@@ -30,10 +32,11 @@ class TimerScreen extends ConsumerWidget {
         subjects.any((s) => s.id == selectedId) ? selectedId : null;
 
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pomodoro Timer'),
+        title: Text(l10n.navTimer),
         actions: [
           IconButton(
             icon: const Icon(Icons.tune),
@@ -88,8 +91,10 @@ class TimerScreen extends ConsumerWidget {
           // ── Subject selector ─────────────────────────────────
           if (!hasSubjects) ...[
             _AddSubjectCard(
-              onTap: () =>
-                  ref.read(selectedTabIndexProvider.notifier).state = 2,
+              title: l10n.subjectRequiredTitle,
+              description: l10n.timerSubjectRequiredDescription,
+              buttonLabel: l10n.subjectRequiredAction,
+              onTap: () => _openSubjects(context, ref),
             ),
             const SizedBox(height: 12),
           ] else ...[
@@ -103,7 +108,7 @@ class TimerScreen extends ConsumerWidget {
                         style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      value: dropdownValue,
+                      initialValue: dropdownValue,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         isDense: true,
@@ -200,6 +205,26 @@ class TimerScreen extends ConsumerWidget {
     );
   }
 
+  void _openSubjects(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final currentTab = ref.read(selectedTabIndexProvider);
+
+    if (currentTab == 3) {
+      ref.read(selectedTabIndexProvider.notifier).state = 3;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.timerGoToSubjectsSnack)),
+      );
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SubjectsScreen()),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.timerGoToSubjectsSnack)),
+    );
+  }
+
   // ── Controls builder ──────────────────────────────────────────────
 
   Widget _buildControls(
@@ -214,8 +239,7 @@ class TimerScreen extends ConsumerWidget {
       return SizedBox(
         width: double.infinity,
         child: FilledButton.icon(
-          onPressed:
-              hasSubjects && dropdownValue != null ? ctrl.start : null,
+          onPressed: hasSubjects && dropdownValue != null ? ctrl.start : null,
           icon: const Icon(Icons.play_arrow_rounded),
           label: const Text('Start Focus'),
         ),
@@ -271,14 +295,13 @@ class TimerScreen extends ConsumerWidget {
 
   void _showPrefsDialog(BuildContext context, WidgetRef ref) {
     final prefs = ref.read(pomodoroPrefsProvider);
-    final workCtrl =
-        TextEditingController(text: prefs.workMinutes.toString());
+    final workCtrl = TextEditingController(text: prefs.workMinutes.toString());
     final shortCtrl =
         TextEditingController(text: prefs.shortBreakMinutes.toString());
     final longCtrl =
         TextEditingController(text: prefs.longBreakMinutes.toString());
-    final roundsCtrl = TextEditingController(
-        text: prefs.sessionsBeforeLongBreak.toString());
+    final roundsCtrl =
+        TextEditingController(text: prefs.sessionsBeforeLongBreak.toString());
 
     showDialog(
       context: context,
@@ -297,16 +320,14 @@ class TimerScreen extends ConsumerWidget {
             TextField(
               controller: shortCtrl,
               decoration: const InputDecoration(
-                  labelText: 'Short break (min)',
-                  border: OutlineInputBorder()),
+                  labelText: 'Short break (min)', border: OutlineInputBorder()),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 12),
             TextField(
               controller: longCtrl,
               decoration: const InputDecoration(
-                  labelText: 'Long break (min)',
-                  border: OutlineInputBorder()),
+                  labelText: 'Long break (min)', border: OutlineInputBorder()),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 12),
@@ -321,8 +342,7 @@ class TimerScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
             onPressed: () {
               final w = int.tryParse(workCtrl.text) ?? 25;
@@ -352,35 +372,43 @@ class TimerScreen extends ConsumerWidget {
 // =============================================================================
 
 class _AddSubjectCard extends StatelessWidget {
-  const _AddSubjectCard({required this.onTap});
+  const _AddSubjectCard({
+    required this.title,
+    required this.description,
+    required this.buttonLabel,
+    required this.onTap,
+  });
+  final String title;
+  final String description;
+  final String buttonLabel;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            Icon(Icons.school_outlined,
-                size: 42,
-                color: Theme.of(context).colorScheme.onSurfaceVariant),
+            Icon(Icons.school_outlined, size: 42, color: cs.onSurface),
             const SizedBox(height: 10),
-            Text('Add a subject first',
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 6),
             Text(
-              'Timer sessions must be linked to a subject.',
+              description,
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
-                  ?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ?.copyWith(color: cs.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 14),
-            FilledButton(onPressed: onTap, child: const Text('Add Subject')),
+            FilledButton(onPressed: onTap, child: Text(buttonLabel)),
           ],
         ),
       ),
@@ -402,7 +430,7 @@ class _RingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final strokeWidth = 10.0;
+    const strokeWidth = 10.0;
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (math.min(size.width, size.height) - strokeWidth) / 2;
 
@@ -480,4 +508,3 @@ String _fmtDuration(int totalSeconds) {
   }
   return '${m}m ${s.toString().padLeft(2, '0')}s';
 }
-

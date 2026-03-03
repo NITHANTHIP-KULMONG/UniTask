@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../auth/services/auth_service.dart';
+import '../../subjects/presentation/subject_controller.dart';
+import 'user_home_page.dart';
 import '../models/task.dart';
 import '../services/task_service.dart';
 
@@ -18,13 +21,23 @@ class AssignmentsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksAsync = ref.watch(userTasksProvider);
+    final hasSubjects =
+        (ref.watch(userSubjectsProvider).valueOrNull ?? []).isNotEmpty;
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Assignments')),
+      appBar: AppBar(title: Text(l10n.navTasks)),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateDialog(context, ref),
+        heroTag: 'tasksFab',
+        onPressed: () {
+          if (!hasSubjects) {
+            _showSubjectRequiredDialog(context, ref);
+            return;
+          }
+          _showCreateDialog(context, ref);
+        },
         icon: const Icon(Icons.add),
-        label: const Text('New Task'),
+        label: Text(l10n.dashboardActionNewTask),
       ),
       body: tasksAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -36,8 +49,7 @@ class AssignmentsTab extends ConsumerWidget {
               children: [
                 const Icon(Icons.error_outline, size: 48, color: Colors.red),
                 const SizedBox(height: 12),
-                Text('Failed to load tasks.\n$e',
-                    textAlign: TextAlign.center),
+                Text('Failed to load tasks.\n$e', textAlign: TextAlign.center),
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: () => ref.invalidate(userTasksProvider),
@@ -54,7 +66,7 @@ class AssignmentsTab extends ConsumerWidget {
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             itemCount: tasks.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
             itemBuilder: (_, i) => _TaskCard(task: tasks[i]),
           );
         },
@@ -80,8 +92,9 @@ class AssignmentsTab extends ConsumerWidget {
                 controller: titleCtrl,
                 decoration: const InputDecoration(labelText: 'Title'),
                 textInputAction: TextInputAction.next,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Title is required.' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Title is required.'
+                    : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -101,8 +114,20 @@ class AssignmentsTab extends ConsumerWidget {
           FilledButton(
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;
+              final hasSubjectsNow =
+                  (ref.read(userSubjectsProvider).valueOrNull ?? []).isNotEmpty;
+              if (!hasSubjectsNow) {
+                if (ctx.mounted) Navigator.pop(ctx);
+                await _showSubjectRequiredDialog(context, ref);
+                return;
+              }
               final uid = ref.read(authServiceProvider).currentUser?.uid;
-              if (uid == null) return;
+              if (uid == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(context.l10n.taskCreateBlockedNoAuth)),
+                );
+                return;
+              }
               await ref.read(taskServiceProvider).createTask(
                     title: titleCtrl.text.trim(),
                     description: descCtrl.text.trim(),
@@ -111,6 +136,33 @@ class AssignmentsTab extends ConsumerWidget {
               if (ctx.mounted) Navigator.pop(ctx);
             },
             child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showSubjectRequiredDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) {
+    final l10n = context.l10n;
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.subjectRequiredTitle),
+        content: Text(l10n.subjectRequiredMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              ref.read(selectedTabIndexProvider.notifier).state = 3;
+            },
+            child: Text(l10n.subjectRequiredAction),
           ),
         ],
       ),
@@ -133,11 +185,16 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.task_alt,
-                size: 64, color: Theme.of(context).colorScheme.outline),
+            Icon(
+              Icons.task_alt,
+              size: 64,
+              color: Theme.of(context).colorScheme.outline,
+            ),
             const SizedBox(height: 16),
-            Text('No tasks yet',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'No tasks yet',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Text(
               'Tap the + button to create your first task.',
@@ -220,8 +277,10 @@ class _TaskCard extends ConsumerWidget {
                   .map((s) => PopupMenuItem(value: s, child: Text(s.label)))
                   .toList(),
               child: Chip(
-                label:
-                    Text(task.status.label, style: const TextStyle(fontSize: 12)),
+                label: Text(
+                  task.status.label,
+                  style: const TextStyle(fontSize: 12),
+                ),
                 backgroundColor: statusColor.withValues(alpha: 0.15),
                 side: BorderSide.none,
                 padding: EdgeInsets.zero,

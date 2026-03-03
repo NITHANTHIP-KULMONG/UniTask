@@ -1,0 +1,192 @@
+{
+  "@@locale": "en",
+  "commonCancel": "Cancel",
+  "commonSave": "Save",
+  "commonRetry": "Retry",
+  "commonDelete": "Delete",
+  "commonSignOut": "Sign Out",
+  "navDashboard": "Dashboard",
+  "navTasks": "Tasks",
+  "navTimer": "Timer",
+  "navSubjects": "Subjects",
+  "subjectRequiredTitle": "Add a subject first",
+  "subjectRequiredMessage": "Please add a subject before creating a task.",
+  "subjectRequiredAction": "Go to Subjects",
+  "taskCreateBlockedNoAuth": "Please sign in again before creating a task.",
+  "timerSubjectRequiredDescription": "Timer sessions must be linked to a subject.",
+  "timerGoToSubjectsSnack": "Opening Subjects...",
+  "dashboardGreeting": "Hi, {name}",
+  "@dashboardGreeting": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "dashboardLoadFailed": "Failed to load dashboard.\\n{error}",
+  "@dashboardLoadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "dashboardTodoLabel": "To Do",
+  "dashboardDoingLabel": "Doing",
+  "dashboardDoneLabel": "Done",
+  "dashboardDoneProgress": "{done} / {total} done",
+  "@dashboardDoneProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardQuickActionsTitle": "Quick Actions",
+  "dashboardActionNewTask": "New Task",
+  "dashboardActionSubjects": "Subjects",
+  "dashboardActionTimer": "Timer",
+  "dashboardSummaryLine": "{subjects} subjects \u2022 {pomodoros} pomodoros \u2022 {studyTime}",
+  "@dashboardSummaryLine": {
+    "placeholders": {
+      "subjects": {
+        "type": "int"
+      },
+      "pomodoros": {
+        "type": "int"
+      },
+      "studyTime": {}
+    }
+  },
+  "dashboardActiveTasksTitle": "Active Tasks",
+  "dashboardAllCaughtUp": "All caught up!",
+  "dashboardNoActiveTasks": "No active tasks. Create one to get started.",
+  "dashboardCreateTask": "Create Task",
+  "dashboardViewAllTasks": "View all tasks",
+  "dashboardStatusTodo": "To Do",
+  "dashboardStatusDoing": "Doing",
+  "dashboardStatusDone": "Done",
+  "profileTitle": "Profile",
+  "profileLoadFailed": "Failed to load profile: {error}",
+  "@profileLoadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileSectionAccount": "Account",
+  "profileSectionPreferences": "Preferences",
+  "profileSectionStats": "Stats",
+  "profileSectionActions": "Actions",
+  "profileSetYourName": "Set your name",
+  "profileProviderGoogle": "Google",
+  "profileProviderEmailPassword": "Email / Password",
+  "profileAdminBadge": "Admin",
+  "profileTheme": "Theme",
+  "profileThemeLight": "Light",
+  "profileThemeSystem": "System",
+  "profileThemeDark": "Dark",
+  "profileStudyDuration": "Study Duration",
+  "profileStudyDurationSubtitle": "{minutes} min per session",
+  "@profileStudyDurationSubtitle": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "profileWeekStartsOn": "Week Starts On",
+  "profileWeekdayMonday": "Monday",
+  "profileWeekdaySaturday": "Saturday",
+  "profileWeekdaySunday": "Sunday",
+  "profileLanguage": "Language",
+  "profileLanguageEn": "English",
+  "profileLanguageTh": "Thai",
+  "profileLanguageChanged": "Language changed to {language}",
+  "@profileLanguageChanged": {
+    "placeholders": {
+      "language": {}
+    }
+  },
+  "profileStatStudyTime": "Study Time",
+  "profileStatCompleted": "Completed",
+  "profileStatJoined": "Joined",
+  "profileEditDisplayNameTitle": "Edit Display Name",
+  "profileDisplayNameLabel": "Display Name",
+  "profileDisplayNameHint": "Enter your name",
+  "profileDisplayNameUpdated": "Display name updated",
+  "profileDisplayNameUpdateFailed": "Failed to update name: {error}",
+  "@profileDisplayNameUpdateFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileDeleteAccount": "Delete Account",
+  "profileDeleteAccountTitle": "Delete Account",
+  "profileDeleteAccountMessage": "This action is permanent and cannot be undone. All your data will be deleted.",
+  "profileDeleteForever": "Delete Forever",
+  "profileDeleteAccountFailed": "Failed to delete account: {error}",
+  "@profileDeleteAccountFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileChangeAvatar": "Change profile photo",
+  "profileTakePhoto": "Take Photo",
+  "profileChooseFromGallery": "Choose from Gallery",
+  "profileAvatarUpdated": "Profile photo updated",
+  "profileAvatarUpdateFailed": "Failed to update profile photo: {error}",
+  "@profileAvatarUpdateFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileChangePassword": "Change Password",
+  "profileChangePasswordDescription": "Send reset email to secure password change",
+  "profileSendResetEmail": "Send Reset Email",
+  "profilePasswordResetSent": "Password reset email sent to {email}",
+  "@profilePasswordResetSent": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "profilePasswordResetFailed": "Failed to send reset email: {error}",
+  "@profilePasswordResetFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileChangePasswordUnavailable": "Password change is only available for email/password accounts.",
+  "profileChangeEmail": "Change Email",
+  "profileChangeEmailDescription": "Re-authenticate, then send verification to new email",
+  "profileCurrentPasswordLabel": "Current Password",
+  "profileNewEmailLabel": "New Email",
+  "profileFieldRequired": "This field is required.",
+  "profileInvalidEmail": "Enter a valid email address.",
+  "profileSendVerificationEmail": "Send Verification",
+  "profileEmailVerificationSent": "Verification sent to {email}. Confirm it to finish changing your email.",
+  "@profileEmailVerificationSent": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "profileEmailChangeFailed": "Failed to start email change: {error}",
+  "@profileEmailChangeFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileAuthWrongPassword": "The current password is incorrect.",
+  "profileAuthInvalidCredential": "The provided credentials are invalid.",
+  "profileAuthEmailInUse": "That email is already in use.",
+  "profileAuthInvalidEmail": "The email format is invalid.",
+  "profileAuthRequiresRecentLogin": "Please sign in again and retry this action.",
+  "profileAuthNetwork": "Network error. Please try again.",
+  "profileAuthTooManyRequests": "Too many attempts. Please wait and retry.",
+  "profileAuthUserDisabled": "This account has been disabled.",
+  "profileAuthGeneric": "Auth error: {code}",
+  "@profileAuthGeneric": {
+    "placeholders": {
+      "code": {}
+    }
+  },
+  "profileChangeEmailUnavailable": "Email change with password re-authentication is only available for email/password accounts."
+}

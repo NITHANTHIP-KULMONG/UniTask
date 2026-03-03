@@ -158,7 +158,7 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<Subject>(
-            value: _selectedSubject,
+            initialValue: _selectedSubject,
             items: subjects
                 .map(
                   (subject) => DropdownMenuItem<Subject>(

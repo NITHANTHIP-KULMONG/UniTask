@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../assignments/presentation/assignments_screen.dart';
 import '../../subjects/presentation/subjects_screen.dart';
 import '../../timer/presentation/timer_screen.dart';
+import '../../tasks/presentation/assignments_tab.dart';
 import 'dashboard_screen.dart';
 
-final selectedTabIndexProvider = StateProvider<int>((ref) => 1);
+final selectedTabIndexProvider = StateProvider<int>((ref) => 0);
 
 class HomeShell extends ConsumerWidget {
   const HomeShell({super.key});
@@ -17,7 +17,7 @@ class HomeShell extends ConsumerWidget {
     void goToTasks() => ref.read(selectedTabIndexProvider.notifier).state = 1;
     final pages = <Widget>[
       DashboardScreen(goToTasks: goToTasks),
-      const AssignmentsScreen(),
+      const AssignmentsTab(),
       const TimerScreen(),
       const SubjectsScreen(),
     ];

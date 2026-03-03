@@ -1,0 +1,192 @@
+{
+  "@@locale": "th",
+  "commonCancel": "ยกเลิก",
+  "commonSave": "บันทึก",
+  "commonRetry": "ลองใหม่",
+  "commonDelete": "ลบ",
+  "commonSignOut": "ออกจากระบบ",
+  "navDashboard": "แดชบอร์ด",
+  "navTasks": "งาน",
+  "navTimer": "ตัวจับเวลา",
+  "navSubjects": "วิชา",
+  "subjectRequiredTitle": "เพิ่มวิชาก่อน",
+  "subjectRequiredMessage": "กรุณาเพิ่มวิชาก่อนสร้างงาน",
+  "subjectRequiredAction": "ไปที่วิชา",
+  "taskCreateBlockedNoAuth": "กรุณาเข้าสู่ระบบใหม่ก่อนสร้างงาน",
+  "timerSubjectRequiredDescription": "การจับเวลาแต่ละครั้งต้องผูกกับวิชา",
+  "timerGoToSubjectsSnack": "กำลังเปิดหน้าวิชา...",
+  "dashboardGreeting": "สวัสดี {name}",
+  "@dashboardGreeting": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "dashboardLoadFailed": "โหลดแดชบอร์ดไม่สำเร็จ\\n{error}",
+  "@dashboardLoadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "dashboardTodoLabel": "ต้องทำ",
+  "dashboardDoingLabel": "กำลังทำ",
+  "dashboardDoneLabel": "เสร็จแล้ว",
+  "dashboardDoneProgress": "เสร็จ {done} / {total}",
+  "@dashboardDoneProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardQuickActionsTitle": "การทำงานด่วน",
+  "dashboardActionNewTask": "งานใหม่",
+  "dashboardActionSubjects": "วิชา",
+  "dashboardActionTimer": "ตัวจับเวลา",
+  "dashboardSummaryLine": "{subjects} วิชา \u2022 โพโมโดโร {pomodoros} รอบ \u2022 {studyTime}",
+  "@dashboardSummaryLine": {
+    "placeholders": {
+      "subjects": {
+        "type": "int"
+      },
+      "pomodoros": {
+        "type": "int"
+      },
+      "studyTime": {}
+    }
+  },
+  "dashboardActiveTasksTitle": "งานที่กำลังทำ",
+  "dashboardAllCaughtUp": "เรียบร้อยทั้งหมด!",
+  "dashboardNoActiveTasks": "ไม่มีงานที่กำลังทำ สร้างงานใหม่เพื่อเริ่มต้น",
+  "dashboardCreateTask": "สร้างงาน",
+  "dashboardViewAllTasks": "ดูงานทั้งหมด",
+  "dashboardStatusTodo": "ต้องทำ",
+  "dashboardStatusDoing": "กำลังทำ",
+  "dashboardStatusDone": "เสร็จแล้ว",
+  "profileTitle": "โปรไฟล์",
+  "profileLoadFailed": "โหลดโปรไฟล์ไม่สำเร็จ: {error}",
+  "@profileLoadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileSectionAccount": "บัญชี",
+  "profileSectionPreferences": "การตั้งค่า",
+  "profileSectionStats": "สถิติ",
+  "profileSectionActions": "การดำเนินการ",
+  "profileSetYourName": "ตั้งชื่อของคุณ",
+  "profileProviderGoogle": "Google",
+  "profileProviderEmailPassword": "อีเมล / รหัสผ่าน",
+  "profileAdminBadge": "ผู้ดูแลระบบ",
+  "profileTheme": "ธีม",
+  "profileThemeLight": "สว่าง",
+  "profileThemeSystem": "ตามระบบ",
+  "profileThemeDark": "มืด",
+  "profileStudyDuration": "ระยะเวลาเรียน",
+  "profileStudyDurationSubtitle": "{minutes} นาทีต่อรอบ",
+  "@profileStudyDurationSubtitle": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "profileWeekStartsOn": "วันเริ่มสัปดาห์",
+  "profileWeekdayMonday": "วันจันทร์",
+  "profileWeekdaySaturday": "วันเสาร์",
+  "profileWeekdaySunday": "วันอาทิตย์",
+  "profileLanguage": "ภาษา",
+  "profileLanguageEn": "อังกฤษ",
+  "profileLanguageTh": "ไทย",
+  "profileLanguageChanged": "เปลี่ยนภาษาเป็น {language}",
+  "@profileLanguageChanged": {
+    "placeholders": {
+      "language": {}
+    }
+  },
+  "profileStatStudyTime": "เวลาเรียน",
+  "profileStatCompleted": "เสร็จสิ้น",
+  "profileStatJoined": "เริ่มใช้",
+  "profileEditDisplayNameTitle": "แก้ไขชื่อที่แสดง",
+  "profileDisplayNameLabel": "ชื่อที่แสดง",
+  "profileDisplayNameHint": "ใส่ชื่อของคุณ",
+  "profileDisplayNameUpdated": "อัปเดตชื่อเรียบร้อยแล้ว",
+  "profileDisplayNameUpdateFailed": "อัปเดตชื่อไม่สำเร็จ: {error}",
+  "@profileDisplayNameUpdateFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileDeleteAccount": "ลบบัญชี",
+  "profileDeleteAccountTitle": "ลบบัญชี",
+  "profileDeleteAccountMessage": "การดำเนินการนี้ถาวรและไม่สามารถยกเลิกได้ ข้อมูลทั้งหมดของคุณจะถูกลบ",
+  "profileDeleteForever": "ลบถาวร",
+  "profileDeleteAccountFailed": "ลบบัญชีไม่สำเร็จ: {error}",
+  "@profileDeleteAccountFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileChangeAvatar": "เปลี่ยนรูปโปรไฟล์",
+  "profileTakePhoto": "ถ่ายรูป",
+  "profileChooseFromGallery": "เลือกจากคลังรูป",
+  "profileAvatarUpdated": "อัปเดตรูปโปรไฟล์แล้ว",
+  "profileAvatarUpdateFailed": "อัปเดตรูปโปรไฟล์ไม่สำเร็จ: {error}",
+  "@profileAvatarUpdateFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileChangePassword": "เปลี่ยนรหัสผ่าน",
+  "profileChangePasswordDescription": "ส่งอีเมลรีเซ็ตรหัสผ่านเพื่อเปลี่ยนอย่างปลอดภัย",
+  "profileSendResetEmail": "ส่งอีเมลรีเซ็ต",
+  "profilePasswordResetSent": "ส่งอีเมลรีเซ็ตรหัสผ่านไปที่ {email} แล้ว",
+  "@profilePasswordResetSent": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "profilePasswordResetFailed": "ส่งอีเมลรีเซ็ตไม่สำเร็จ: {error}",
+  "@profilePasswordResetFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileChangePasswordUnavailable": "การเปลี่ยนรหัสผ่านใช้ได้เฉพาะบัญชีอีเมล/รหัสผ่านเท่านั้น",
+  "profileChangeEmail": "เปลี่ยนอีเมล",
+  "profileChangeEmailDescription": "ยืนยันตัวตนอีกครั้ง แล้วส่งอีเมลยืนยันไปยังอีเมลใหม่",
+  "profileCurrentPasswordLabel": "รหัสผ่านปัจจุบัน",
+  "profileNewEmailLabel": "อีเมลใหม่",
+  "profileFieldRequired": "จำเป็นต้องกรอกข้อมูล",
+  "profileInvalidEmail": "กรุณากรอกอีเมลให้ถูกต้อง",
+  "profileSendVerificationEmail": "ส่งอีเมลยืนยัน",
+  "profileEmailVerificationSent": "ส่งอีเมลยืนยันไปที่ {email} แล้ว กรุณายืนยันเพื่อเปลี่ยนอีเมลให้เสร็จสมบูรณ์",
+  "@profileEmailVerificationSent": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "profileEmailChangeFailed": "เริ่มการเปลี่ยนอีเมลไม่สำเร็จ: {error}",
+  "@profileEmailChangeFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileAuthWrongPassword": "รหัสผ่านปัจจุบันไม่ถูกต้อง",
+  "profileAuthInvalidCredential": "ข้อมูลยืนยันตัวตนไม่ถูกต้อง",
+  "profileAuthEmailInUse": "อีเมลนี้ถูกใช้งานแล้ว",
+  "profileAuthInvalidEmail": "รูปแบบอีเมลไม่ถูกต้อง",
+  "profileAuthRequiresRecentLogin": "กรุณาเข้าสู่ระบบใหม่แล้วลองอีกครั้ง",
+  "profileAuthNetwork": "เครือข่ายมีปัญหา กรุณาลองอีกครั้ง",
+  "profileAuthTooManyRequests": "ลองบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่",
+  "profileAuthUserDisabled": "บัญชีนี้ถูกปิดใช้งาน",
+  "profileAuthGeneric": "ข้อผิดพลาดการยืนยันตัวตน: {code}",
+  "@profileAuthGeneric": {
+    "placeholders": {
+      "code": {}
+    }
+  },
+  "profileChangeEmailUnavailable": "การเปลี่ยนอีเมลแบบยืนยันด้วยรหัสผ่านใช้ได้เฉพาะบัญชีอีเมล/รหัสผ่านเท่านั้น"
+}

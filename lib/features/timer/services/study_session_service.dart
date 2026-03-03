@@ -31,7 +31,7 @@ final dailyStudySecondsProvider = Provider<int>((ref) {
           s.sessionType == SessionType.work &&
           !s.startAt.isBefore(today) &&
           s.startAt.isBefore(tomorrow))
-      .fold<int>(0, (sum, s) => sum + s.durationSeconds.clamp(0, 86400));
+      .fold<int>(0, (total, s) => total + s.durationSeconds.clamp(0, 86400));
 });
 
 /// Today's completed Pomodoro count.

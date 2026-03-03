@@ -45,7 +45,7 @@ final appUserProvider = StreamProvider<AppUser?>((ref) {
 
   return authState.when(
     loading: () => const Stream.empty(),
-    error: (_, __) => const Stream.empty(),
+    error: (error, stackTrace) => const Stream.empty(),
     data: (user) {
       if (user == null) return Stream.value(null);
       return ref.read(authServiceProvider).userDocStream(user.uid);
@@ -241,7 +241,62 @@ class AuthService {
     await user.updateDisplayName(newName);
 
     // Update Firestore user document
-    await _usersCol.doc(user.uid).update({'name': newName});
+    await _usersCol.doc(user.uid).set({
+      'name': newName,
+    }, SetOptions(merge: true));
+  }
+
+  /// Updates profile photo in both Firebase Auth and Firestore.
+  Future<void> updatePhotoUrl(String photoUrl) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await user.updatePhotoURL(photoUrl);
+    await _usersCol.doc(user.uid).set({
+      'photoUrl': photoUrl,
+    }, SetOptions(merge: true));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Credential flows
+  // ---------------------------------------------------------------------------
+
+  /// Sends a Firebase reset-password email.
+  ///
+  /// This is the secure password-change flow for end users.
+  Future<void> sendPasswordResetEmail(String email) {
+    return _auth.sendPasswordResetEmail(email: email);
+  }
+
+  /// Re-authenticates with current password and sends verification to [newEmail].
+  ///
+  /// The email is not changed until the user confirms the verification link.
+  Future<void> sendEmailChangeVerification({
+    required String currentPassword,
+    required String newEmail,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'not-authenticated',
+        message: 'No authenticated user found.',
+      );
+    }
+
+    final oldEmail = user.email;
+    if (oldEmail == null || oldEmail.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'missing-email',
+        message: 'Current account email is missing.',
+      );
+    }
+
+    final credential = EmailAuthProvider.credential(
+      email: oldEmail,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(credential);
+    await user.verifyBeforeUpdateEmail(newEmail.trim());
   }
 
   // ---------------------------------------------------------------------------

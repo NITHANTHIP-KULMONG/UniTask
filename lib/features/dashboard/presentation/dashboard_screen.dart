@@ -1,7 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:unitask/l10n/app_localizations.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../auth/services/auth_service.dart';
+import '../../profile/presentation/profile_screen.dart';
 import '../../subjects/presentation/subject_controller.dart';
 import '../../tasks/models/task.dart';
 import '../../tasks/presentation/user_home_page.dart';
@@ -18,7 +22,9 @@ import '../../timer/services/study_session_service.dart';
 ///  • Active (non-done) tasks list with "View all" link
 ///  • Empty state CTA when no active tasks exist
 class DashboardScreen extends ConsumerWidget {
-  const DashboardScreen({super.key, required void Function() goToTasks});
+  const DashboardScreen({super.key, required this.goToTasks});
+
+  final VoidCallback goToTasks;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -27,6 +33,8 @@ class DashboardScreen extends ConsumerWidget {
     final subjectsAsync = ref.watch(userSubjectsProvider);
     final dailyStudySecs = ref.watch(dailyStudySecondsProvider);
     final dailyPomodoros = ref.watch(dailyPomodoroCountProvider);
+    final l10n = context.l10n;
+    final cs = Theme.of(context).colorScheme;
 
     // Resolve display name and photo.
     final displayName = appUserAsync.whenOrNull(
@@ -34,24 +42,34 @@ class DashboardScreen extends ConsumerWidget {
         ) ??
         '';
     final photoUrl = appUserAsync.whenOrNull(data: (u) => u?.photoUrl);
+    final firstName =
+        displayName.trim().isNotEmpty ? displayName.split(' ').first : '';
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Hi, ${displayName.split(' ').first}'),
+        title: Text(l10n.dashboardGreeting(firstName)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundImage:
-                  photoUrl != null ? NetworkImage(photoUrl) : null,
-              child: photoUrl == null
-                  ? Text(
-                      (displayName.isNotEmpty ? displayName[0] : '?')
-                          .toUpperCase(),
-                      style: const TextStyle(fontSize: 14),
-                    )
-                  : null,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+              },
+              child: CircleAvatar(
+                radius: 18,
+                backgroundImage:
+                    photoUrl != null ? NetworkImage(photoUrl) : null,
+                child: photoUrl == null
+                    ? Text(
+                        (displayName.isNotEmpty ? displayName[0] : '?')
+                            .toUpperCase(),
+                        style: const TextStyle(fontSize: 14),
+                      )
+                    : null,
+              ),
             ),
           ),
         ],
@@ -64,22 +82,24 @@ class DashboardScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                Icon(Icons.error_outline, size: 48, color: cs.error),
                 const SizedBox(height: 12),
-                Text('Failed to load dashboard.\n$e',
-                    textAlign: TextAlign.center),
+                Text(
+                  l10n.dashboardLoadFailed('$e'),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: () => ref.invalidate(userTasksProvider),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
+                  label: Text(l10n.commonRetry),
                 ),
               ],
             ),
           ),
         ),
         data: (tasks) {
-          // ── Task stats ──
+          // Task stats.
           final total = tasks.length;
           final todoCount =
               tasks.where((t) => t.status == TaskStatus.todo).length;
@@ -89,28 +109,32 @@ class DashboardScreen extends ConsumerWidget {
               tasks.where((t) => t.status == TaskStatus.done).length;
           final progress = total == 0 ? 0.0 : doneCount / total;
 
-          // ── Subject count ──
+          // Subject count.
           final subjectCount = subjectsAsync.valueOrNull?.length ?? 0;
+          void onCreateTaskPressed() {
+            if (subjectCount > 0) {
+              goToTasks();
+              return;
+            }
+            _showSubjectRequiredDialog(context, ref);
+          }
 
           final now = DateTime.now();
 
-          // ── Active tasks ──
+          // Active tasks.
           final activeTasks =
               tasks.where((t) => t.status != TaskStatus.done).toList();
 
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Date
               Text(
-                _fmtDateLong(now),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                _fmtDateLong(context, now),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
               ),
               const SizedBox(height: 12),
-
-              // ── Stats card ──
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -119,14 +143,23 @@ class DashboardScreen extends ConsumerWidget {
                       Row(
                         children: [
                           Expanded(
-                              child:
-                                  _Stat(value: '$todoCount', label: 'To Do')),
+                            child: _Stat(
+                              value: '$todoCount',
+                              label: l10n.dashboardTodoLabel,
+                            ),
+                          ),
                           Expanded(
-                              child:
-                                  _Stat(value: '$doingCount', label: 'Doing')),
+                            child: _Stat(
+                              value: '$doingCount',
+                              label: l10n.dashboardDoingLabel,
+                            ),
+                          ),
                           Expanded(
-                              child:
-                                  _Stat(value: '$doneCount', label: 'Done')),
+                            child: _Stat(
+                              value: '$doneCount',
+                              label: l10n.dashboardDoneLabel,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -135,67 +168,67 @@ class DashboardScreen extends ConsumerWidget {
                         child: LinearProgressIndicator(
                           value: progress,
                           minHeight: 8,
-                          backgroundColor: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
+                          backgroundColor: cs.surfaceContainerHighest,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: Text('$doneCount / $total done',
-                            style: Theme.of(context).textTheme.bodySmall),
+                        child: Text(
+                          l10n.dashboardDoneProgress(doneCount, total),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-
-              // ── Quick actions card ──
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Quick Actions',
-                          style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        l10n.dashboardQuickActionsTitle,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 12),
                       Wrap(
                         spacing: 10,
                         runSpacing: 10,
                         children: [
                           FilledButton.icon(
-                            onPressed: () => ref
-                                .read(selectedTabIndexProvider.notifier)
-                                .state = 1,
+                            onPressed: onCreateTaskPressed,
                             icon: const Icon(Icons.add),
-                            label: const Text('New Task'),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () => ref
-                                .read(selectedTabIndexProvider.notifier)
-                                .state = 2,
-                            icon: const Icon(Icons.menu_book_outlined),
-                            label: const Text('Subjects'),
+                            label: Text(l10n.dashboardActionNewTask),
                           ),
                           OutlinedButton.icon(
                             onPressed: () => ref
                                 .read(selectedTabIndexProvider.notifier)
                                 .state = 3,
+                            icon: const Icon(Icons.menu_book_outlined),
+                            label: Text(l10n.dashboardActionSubjects),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => ref
+                                .read(selectedTabIndexProvider.notifier)
+                                .state = 2,
                             icon: const Icon(Icons.timer_outlined),
-                            label: const Text('Timer'),
+                            label: Text(l10n.dashboardActionTimer),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '$subjectCount subjects • $dailyPomodoros pomodoros • ${_fmtDuration(dailyStudySecs)}',
+                        l10n.dashboardSummaryLine(
+                          subjectCount,
+                          dailyPomodoros,
+                          _fmtDuration(dailyStudySecs),
+                        ),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                              color: cs.onSurfaceVariant,
                             ),
                       ),
                     ],
@@ -203,12 +236,11 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // ── Active tasks section ──
-              Text('Active Tasks',
-                  style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                l10n.dashboardActiveTasksTitle,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
-
               if (activeTasks.isEmpty)
                 Card(
                   child: Padding(
@@ -216,31 +248,29 @@ class DashboardScreen extends ConsumerWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle_outline,
-                            size: 48,
-                            color: Theme.of(context).colorScheme.outline),
+                        Icon(
+                          Icons.check_circle_outline,
+                          size: 48,
+                          color: cs.outline,
+                        ),
                         const SizedBox(height: 12),
-                        Text('All caught up!',
-                            style: Theme.of(context).textTheme.titleMedium),
+                        Text(
+                          l10n.dashboardAllCaughtUp,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                         const SizedBox(height: 4),
                         Text(
-                          'No active tasks. Create one to get started.',
+                          l10n.dashboardNoActiveTasks,
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
-                              ?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                              ),
+                              ?.copyWith(color: cs.onSurfaceVariant),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 16),
                         FilledButton(
-                          onPressed: () => ref
-                              .read(selectedTabIndexProvider.notifier)
-                              .state = 1,
-                          child: const Text('Create Task'),
+                          onPressed: onCreateTaskPressed,
+                          child: Text(l10n.dashboardCreateTask),
                         ),
                       ],
                     ),
@@ -253,15 +283,12 @@ class DashboardScreen extends ConsumerWidget {
                         child: _DashboardTaskTile(task: task),
                       ),
                     ),
-
               if (activeTasks.length > 5) ...[
                 const SizedBox(height: 8),
                 Center(
                   child: TextButton(
-                    onPressed: () => ref
-                        .read(selectedTabIndexProvider.notifier)
-                        .state = 1,
-                    child: const Text('View all tasks'),
+                    onPressed: goToTasks,
+                    child: Text(l10n.dashboardViewAllTasks),
                   ),
                 ),
               ],
@@ -287,15 +314,18 @@ class _Stat extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value,
-            style: Theme.of(context)
-                .textTheme
-                .headlineMedium
-                ?.copyWith(fontWeight: FontWeight.w700)),
-        Text(label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                )),
+        Text(
+          value,
+          style: Theme.of(
+            context,
+          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
       ],
     );
   }
@@ -308,10 +338,11 @@ class _DashboardTaskTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final statusColor = switch (task.status) {
       TaskStatus.todo => cs.outline,
       TaskStatus.doing => cs.primary,
-      TaskStatus.done => Colors.green,
+      TaskStatus.done => cs.tertiary,
     };
 
     return Card(
@@ -319,16 +350,14 @@ class _DashboardTaskTile extends StatelessWidget {
         leading: Container(
           width: 12,
           height: 12,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: statusColor,
-          ),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: statusColor),
         ),
-        title:
-            Text(task.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        title: Text(task.title, maxLines: 1, overflow: TextOverflow.ellipsis),
         trailing: Chip(
-          label: Text(task.status.label,
-              style: const TextStyle(fontSize: 11)),
+          label: Text(
+            _localizedStatusLabel(l10n, task.status),
+            style: const TextStyle(fontSize: 11),
+          ),
           backgroundColor: statusColor.withValues(alpha: 0.15),
           side: BorderSide.none,
           visualDensity: VisualDensity.compact,
@@ -342,12 +371,9 @@ class _DashboardTaskTile extends StatelessWidget {
 // Formatters
 // =============================================================================
 
-String _fmtDateLong(DateTime d) {
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-  return '${months[d.month - 1]} ${d.day}, ${d.year}';
+String _fmtDateLong(BuildContext context, DateTime d) {
+  final locale = Localizations.localeOf(context).toLanguageTag();
+  return DateFormat.yMMMd(locale).format(d);
 }
 
 String _fmtDuration(int totalSeconds) {
@@ -361,3 +387,34 @@ String _fmtDuration(int totalSeconds) {
   return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
 }
 
+String _localizedStatusLabel(AppLocalizations l10n, TaskStatus status) {
+  return switch (status) {
+    TaskStatus.todo => l10n.dashboardStatusTodo,
+    TaskStatus.doing => l10n.dashboardStatusDoing,
+    TaskStatus.done => l10n.dashboardStatusDone,
+  };
+}
+
+Future<void> _showSubjectRequiredDialog(BuildContext context, WidgetRef ref) {
+  final l10n = context.l10n;
+  return showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(l10n.subjectRequiredTitle),
+      content: Text(l10n.subjectRequiredMessage),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: Text(l10n.commonCancel),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.of(ctx).pop();
+            ref.read(selectedTabIndexProvider.notifier).state = 3;
+          },
+          child: Text(l10n.subjectRequiredAction),
+        ),
+      ],
+    ),
+  );
+}
