@@ -307,38 +307,35 @@ class TimerScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Timer Settings'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: workCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Work (min)', border: OutlineInputBorder()),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: shortCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Short break (min)', border: OutlineInputBorder()),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: longCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Long break (min)', border: OutlineInputBorder()),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: roundsCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Rounds before long break',
-                  border: OutlineInputBorder()),
-              keyboardType: TextInputType.number,
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _PrefsNumberField(
+                label: 'Work (min)',
+                hint: '1-120',
+                controller: workCtrl,
+              ),
+              const SizedBox(height: 12),
+              _PrefsNumberField(
+                label: 'Short break (min)',
+                hint: '1-60',
+                controller: shortCtrl,
+              ),
+              const SizedBox(height: 12),
+              _PrefsNumberField(
+                label: 'Long break (min)',
+                hint: '1-60',
+                controller: longCtrl,
+              ),
+              const SizedBox(height: 12),
+              _PrefsNumberField(
+                label: 'Rounds before long break',
+                hint: '1-12',
+                controller: roundsCtrl,
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -370,6 +367,44 @@ class TimerScreen extends ConsumerWidget {
 // =============================================================================
 // Internal widgets
 // =============================================================================
+
+class _PrefsNumberField extends StatelessWidget {
+  const _PrefsNumberField({
+    required this.label,
+    required this.hint,
+    required this.controller,
+  });
+
+  final String label;
+  final String hint;
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            hintText: hint,
+            border: const OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class _AddSubjectCard extends StatelessWidget {
   const _AddSubjectCard({

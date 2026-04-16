@@ -1,89 +1,118 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <title>UniTask - Smart Academic Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-900 text-slate-200 font-sans antialiased selection:bg-blue-500 selection:text-white">
 
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/12.10.0/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/12.10.0/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/12.10.0/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/12.10.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/12.10.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/12.10.0/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/12.10.0/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/12.10.0/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/12.10.0/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/12.10.0/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+    <nav class="fixed w-full z-50 top-0 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
+        <div class="mx-auto max-w-7xl px-6 lg:px-8 flex items-center justify-between h-20">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/30">
+                    U
+                </div>
+                <span class="text-xl font-bold text-white tracking-tight">UniTask</span>
+            </div>
+            <div>
+                <a href="/web/" class="rounded-full bg-slate-100 hover:bg-white text-slate-900 px-6 py-2.5 text-sm font-bold shadow-sm transition-all duration-200 flex items-center gap-2">
+                    Open App <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
 
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
-    </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
+    <header class="relative overflow-hidden pt-40 pb-20 lg:pt-48 lg:pb-32">
+        <div class="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80">
+            <div class="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#0ea5e9] to-[#10b981] opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"></div>
+        </div>
+        <div class="mx-auto max-w-7xl px-6 lg:px-8 text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-sm font-medium mb-6 border border-blue-500/20">
+                <i class="fa-solid fa-graduation-cap"></i> Education App
+            </div>
+            <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-6xl mb-6">
+                Study Smarter. <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">Beat Every Exam.</span> 
+            </h1>
+            <p class="mt-6 text-lg leading-8 text-slate-400 max-w-2xl mx-auto">
+                A personal academic planner that helps you organize your syllabus, log focused study sessions, and see your GPA readiness grow — all in one place.
+            </p>
+            
+            <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="https://drive.google.com/file/d/1fN7SNS1mGt_GWhUK-ut3qtjA_j_n8zV1/view?usp=sharing" target="_blank" class="w-full sm:w-auto rounded-full bg-blue-600 px-8 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-blue-500 transition-all duration-200 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download"></i> Download APK
+                </a>
+                <a href="/web/" class="w-full sm:w-auto rounded-full bg-slate-800 border border-slate-700 px-8 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-slate-700 transition-all duration-200 flex items-center justify-center gap-2">
+                    Open UniTask <i class="fa-solid fa-rocket text-amber-400"></i>
+                </a>
+            </div>
+        </div>
+    </header>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+    <section class="py-24 bg-slate-800/30 border-y border-slate-800/50">
+        <div class="mx-auto max-w-7xl px-6 lg:px-8">
+            <div class="mx-auto max-w-2xl lg:text-center mb-16">
+                <h2 class="text-base font-semibold leading-7 text-blue-400">Work Smarter</h2>
+                <p class="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">แนะนำแอปสำหรับนักศึกษา</p>
+            </div>
+            <div class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-3">
+                <div class="bg-slate-800/80 p-8 rounded-3xl border border-slate-700 hover:border-blue-500/50 transition-colors">
+                    <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-blue-500/10 mb-6">
+                        <i class="fa-solid fa-sort-amount-down text-blue-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Priority Algorithm</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">จัดเรียงงานให้โดยอัตโนมัติ คำนวณจากน้ำหนักคะแนนและวันกำหนดส่ง รู้ทันทีว่าควรทำอะไรก่อน</p>
+                </div>
+                <div class="bg-slate-800/80 p-8 rounded-3xl border border-slate-700 hover:border-emerald-500/50 transition-colors">
+                    <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-emerald-500/10 mb-6">
+                        <i class="fa-solid fa-chart-pie text-emerald-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">GPA Impact Dashboard</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">ติดตามความคืบหน้าของคะแนนเก็บแบบเรียลไทม์ มองเห็นภาพรวมว่าคุณเก็บคะแนนไปได้เท่าไหร่แล้ว</p>
+                </div>
+                <div class="bg-slate-800/80 p-8 rounded-3xl border border-slate-700 hover:border-purple-500/50 transition-colors">
+                    <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-purple-500/10 mb-6">
+                        <i class="fa-solid fa-stopwatch text-purple-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Focus Timer</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">นาฬิกาจับเวลาแบบ Pomodoro สำหรับอ่านหนังสือและทำโปรเจกต์ บันทึกประวัติการโฟกัสแยกตามวิชา</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-        try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
-        }
-      });
-    </script>
-  </body>
+    <section class="py-20">
+        <div class="mx-auto max-w-5xl px-6 lg:px-8">
+            <div class="bg-gradient-to-r from-slate-800 to-slate-900 rounded-3xl p-8 sm:p-12 flex flex-col sm:flex-row items-center justify-between border border-slate-700 shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl"></div>
+                <div class="mb-8 sm:mb-0 text-center sm:text-left relative z-10">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">พร้อมเริ่มใช้งาน UniTask แล้วหรือยัง?</h2>
+                    <p class="text-slate-400 mt-3 text-sm sm:text-base">อ่านข้อมูลครบแล้ว กด Open App เพื่อเข้าสู่ระบบและจัดระเบียบเกรดของคุณได้เลย</p>
+                </div>
+                <div class="relative z-10 w-full sm:w-auto">
+                    <a href="/web/" class="w-full sm:w-auto rounded-full bg-teal-500 px-10 py-4 text-base font-bold text-slate-900 shadow-lg hover:bg-teal-400 transition-all duration-200 flex items-center justify-center gap-2 whitespace-nowrap">
+                        <i class="fa-solid fa-play"></i> Open App
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-slate-950 border-t border-slate-800/50 py-8">
+        <div class="mx-auto max-w-7xl px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2 text-slate-400 font-semibold">
+                <div class="h-6 w-6 bg-slate-800 rounded flex items-center justify-center text-xs">U</div>
+                UniTask
+            </div>
+            <p class="text-sm text-slate-500 text-center">
+                Built by Nithanthip Kulmong (Arthur) · Mae Fah Luang University · 2026
+            </p>
+        </div>
+    </footer>
+
+</body>
 </html>

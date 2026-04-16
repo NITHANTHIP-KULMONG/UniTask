@@ -241,7 +241,7 @@ class _AdminTaskTile extends StatelessWidget {
               : null,
         ),
         subtitle: Text(
-          'Owner: ${task.ownerId.substring(0, 8)}…',
+          'Owner: ${task.userId.substring(0, 8)}…',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         trailing: Chip(
