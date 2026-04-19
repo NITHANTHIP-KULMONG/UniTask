@@ -2,11 +2,44 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// App-wide theme mode — Light / Dark / System.
-///
-/// Stored in-memory; survives navigation but resets on full page reload.
-/// Ready to persist to SharedPreferences or Firestore user prefs later.
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
+const _themeModePrefKey = 'app_theme_mode';
+
+/// App-wide theme mode persisted locally.
+class ThemeModeController extends StateNotifier<ThemeMode> {
+  ThemeModeController() : super(ThemeMode.system) {
+    _loadSavedThemeMode();
+  }
+
+  Future<void> _loadSavedThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_themeModePrefKey);
+
+    state = switch (raw) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    if (state == mode) return;
+    state = mode;
+
+    final prefs = await SharedPreferences.getInstance();
+    final raw = switch (mode) {
+      ThemeMode.light => 'light',
+      ThemeMode.dark => 'dark',
+      ThemeMode.system => 'system',
+    };
+
+    await prefs.setString(_themeModePrefKey, raw);
+  }
+}
+
+final themeModeProvider =
+    StateNotifierProvider<ThemeModeController, ThemeMode>((ref) {
+  return ThemeModeController();
+});
 
 /// First day of the week — used by calendar-related features.
 ///

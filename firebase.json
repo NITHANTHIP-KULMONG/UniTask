@@ -1,34 +1,15 @@
 {
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
   "hosting": {
-    "public": "public",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ]
-  },
-  "flutter": {
-    "platforms": {
-      "dart": {
-        "lib/firebase_options.dart": {
-          "projectId": "unitask-d448b",
-          "configurations": {
-            "android": "1:729164466156:android:1c264ecd58760e8d4562c9",
-            "web": "1:729164466156:web:36ea703e268a6a1b4562c9"
-          }
-        }
+    "public": "build/web",
+    "rewrites": [
+      {
+        "source": "/landingpage/**",
+        "destination": "/index.html"
       },
-      "android": {
-        "default": {
-          "projectId": "unitask-d448b",
-          "appId": "1:729164466156:android:1c264ecd58760e8d4562c9",
-          "fileOutput": "android/app/google-services.json"
-        }
+      {
+        "source": "**",
+        "destination": "/index.html"
       }
-    }
+    ]
   }
 }

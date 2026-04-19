@@ -27,7 +27,6 @@ class UserHomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(selectedTabIndexProvider);
     final l10n = context.l10n;
-    final iconColor = Theme.of(context).colorScheme.onSurface;
     void goToTasks() => ref.read(selectedTabIndexProvider.notifier).state = 1;
 
     final pages = <Widget>[
@@ -46,23 +45,23 @@ class UserHomePage extends ConsumerWidget {
         },
         destinations: [
           NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined, color: iconColor),
-            selectedIcon: Icon(Icons.dashboard, color: iconColor),
+            icon: const Icon(Icons.dashboard_outlined),
+            selectedIcon: const Icon(Icons.dashboard),
             label: l10n.navDashboard,
           ),
           NavigationDestination(
-            icon: Icon(Icons.task_alt_outlined, color: iconColor),
-            selectedIcon: Icon(Icons.task_alt, color: iconColor),
+            icon: const Icon(Icons.task_alt_outlined),
+            selectedIcon: const Icon(Icons.task_alt),
             label: l10n.navTasks,
           ),
           NavigationDestination(
-            icon: Icon(Icons.timer_outlined, color: iconColor),
-            selectedIcon: Icon(Icons.timer, color: iconColor),
+            icon: const Icon(Icons.timer_outlined),
+            selectedIcon: const Icon(Icons.timer),
             label: l10n.navTimer,
           ),
           NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined, color: iconColor),
-            selectedIcon: Icon(Icons.menu_book, color: iconColor),
+            icon: const Icon(Icons.menu_book_outlined),
+            selectedIcon: const Icon(Icons.menu_book),
             label: l10n.navSubjects,
           ),
         ],

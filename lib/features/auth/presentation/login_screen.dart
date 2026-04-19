@@ -8,10 +8,11 @@ import '../../../shared/widgets/custom_card.dart';
 import '../../../shared/widgets/custom_text_field.dart';
 import '../services/auth_service.dart';
 import 'auth_gate.dart';
+import 'forgot_password_screen.dart';
 import 'register_page.dart';
 
-class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({
     super.key,
     this.initialSnackBarMessage,
   });
@@ -19,17 +20,15 @@ class LoginPage extends ConsumerStatefulWidget {
   final String? initialSnackBarMessage;
 
   @override
-  ConsumerState<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-
   bool _isLoading = false;
   bool _isGoogleLoading = false;
-  bool _showForgotPasswordButton = false;
 
   @override
   void initState() {
@@ -52,8 +51,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isGoogleLoading = true);
+
+    try {
+      await ref.read(authServiceProvider).signInWithGoogle();
+      if (mounted) {
+        _goToAppRoot();
+      }
+    } on FirebaseAuthException catch (e) {
+      _showError(_mapGoogleErrorCode(e.code));
+    } catch (_) {
+      _showError('Google sign-in failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
+  }
+
   Future<void> _handleSignIn() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isLoading = true);
 
     try {
@@ -61,145 +78,66 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             email: _emailCtrl.text.trim(),
             password: _passwordCtrl.text.trim(),
           );
-
-      if (!mounted) return;
-      setState(() => _showForgotPasswordButton = false);
-      _goToAppRoot();
+      if (mounted) {
+        _goToAppRoot();
+      }
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'wrong-password' ||
-          e.code == 'user-not-found' ||
-          e.code == 'invalid-credential') {
-        if (mounted) {
-          setState(() => _showForgotPasswordButton = true);
-          _showSnackBar('Email or password is incorrect.');
-        }
+      // Changed: when login credentials are invalid, show forgot-password action.
+      if (e.code == 'wrong-password' || e.code == 'user-not-found') {
+        _showInvalidCredentialSnackBar();
       } else {
-        _showSnackBar(_mapLoginErrorCode(e.code));
+        _showError(_mapErrorCode(e.code));
       }
     } catch (_) {
-      _showSnackBar('An unexpected error occurred. Please try again.');
+      _showError('An unexpected error occurred. Please try again.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _handleGoogleSignIn() async {
-    setState(() => _isGoogleLoading = true);
+  // Changed: shows error and a "Forgot Password?" button only when login fails.
+  void _showInvalidCredentialSnackBar() {
+    if (!mounted) return;
 
-    try {
-      await ref.read(authServiceProvider).signInWithGoogle();
-      if (!mounted) return;
-      _goToAppRoot();
-    } on FirebaseAuthException catch (e) {
-      _showSnackBar(_mapGoogleErrorCode(e.code));
-    } catch (_) {
-      _showSnackBar('Google sign-in failed. Please try again.');
-    } finally {
-      if (mounted) setState(() => _isGoogleLoading = false);
-    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('อีเมลหรือรหัสผ่านไม่ถูกต้อง'),
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+            label: 'Forgot Password?',
+            onPressed: _openForgotPassword,
+          ),
+        ),
+      );
   }
 
-  Future<void> _openForgotPasswordDialog() async {
-    final emailCtrl = TextEditingController(text: _emailCtrl.text.trim());
-    final formKey = GlobalKey<FormState>();
-
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        bool isSending = false;
-
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Forgot Password?'),
-              content: Form(
-                key: formKey,
-                child: TextFormField(
-                  controller: emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'name@example.com',
-                    prefixIcon: Icon(Icons.alternate_email_rounded),
-                  ),
-                  validator: (value) {
-                    final email = value?.trim() ?? '';
-                    if (email.isEmpty) {
-                      return 'Email is required.';
-                    }
-                    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                        .hasMatch(email)) {
-                      return 'Enter a valid email address.';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed:
-                      isSending ? null : () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: isSending
-                      ? null
-                      : () async {
-                          if (!formKey.currentState!.validate()) return;
-
-                          setDialogState(() => isSending = true);
-                          final email = emailCtrl.text.trim();
-
-                          try {
-                            await FirebaseAuth.instance
-                                .sendPasswordResetEmail(email: email);
-
-                            if (dialogContext.mounted) {
-                              Navigator.of(dialogContext).pop();
-                            }
-
-                            if (mounted) {
-                              _showSnackBar('Reset link sent to your email');
-                            }
-                          } on FirebaseAuthException catch (e) {
-                            if (mounted) {
-                              _showSnackBar(_mapResetErrorCode(e.code));
-                            }
-                          } catch (_) {
-                            if (mounted) {
-                              _showSnackBar(
-                                'Unable to send reset email. Please try again.',
-                              );
-                            }
-                          } finally {
-                            if (dialogContext.mounted) {
-                              setDialogState(() => isSending = false);
-                            }
-                          }
-                        },
-                  child: isSending
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Submit'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+  // Changed: navigates to the dedicated Firebase reset-password screen.
+  void _openForgotPassword() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ForgotPasswordScreen(
+          initialEmail: _emailCtrl.text.trim(),
+        ),
+      ),
     );
-
-    emailCtrl.dispose();
   }
 
-  String _mapLoginErrorCode(String code) {
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _mapErrorCode(String code) {
     return switch (code) {
       'invalid-email' => 'The email address is not valid.',
       'user-disabled' => 'This account has been disabled.',
+      'invalid-credential' =>
+        'Invalid credentials. Check your email and password.',
       'too-many-requests' =>
         'Too many attempts. Please wait a moment and try again.',
       _ => 'Login failed ($code). Please try again.',
@@ -217,22 +155,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       'user-disabled' => 'This account has been disabled.',
       _ => 'Google sign-in failed ($code). Please try again.',
     };
-  }
-
-  String _mapResetErrorCode(String code) {
-    return switch (code) {
-      'invalid-email' => 'Invalid email format.',
-      'user-not-found' => 'No user found for this email.',
-      'too-many-requests' => 'Too many requests. Please try again later.',
-      _ => 'Failed to send reset email ($code).',
-    };
-  }
-
-  void _showSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _goToAppRoot() {
@@ -373,17 +295,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             isLoading: _isLoading,
                             icon: Icons.login_rounded,
                           ),
-                          if (_showForgotPasswordButton) ...[
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: _openForgotPasswordDialog,
-                                child: const Text('Forgot Password?'),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 16),
                           Row(
                             children: [
                               Expanded(

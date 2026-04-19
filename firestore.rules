@@ -37,6 +37,18 @@ service cloud.firestore {
       // Users can delete their own doc (account deletion).
       allow delete: if request.auth != null
                     && request.auth.uid == userId;
+
+      // Private OTP docs for sensitive account actions.
+      match /otps/{otpId} {
+        allow read, create, update, delete: if request.auth != null
+                                            && request.auth.uid == userId;
+      }
+    }
+
+    // Outbound email queue (for Firebase Trigger Email extension).
+    match /mail/{mailId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false;
     }
 
     // ────────────────────────────────────────────────

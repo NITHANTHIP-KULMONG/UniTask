@@ -1,13 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/preferences/app_preferences.dart';
+import '../../../shared/widgets/app_loading_screen.dart';
+import '../../auth/presentation/login_page.dart';
 import '../../auth/services/auth_service.dart';
 import '../../tasks/models/task.dart';
 import '../../tasks/services/task_service.dart';
@@ -47,9 +46,6 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  final ImagePicker _imagePicker = ImagePicker();
-  bool _isUploadingAvatar = false;
-
   @override
   Widget build(BuildContext context) {
     final appUserAsync = ref.watch(appUserProvider);
@@ -60,17 +56,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.profileTitle)),
       body: appUserAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const AppLoadingScreen(message: 'Loading profile...'),
         error: (e, _) => Center(child: Text(l10n.profileLoadFailed('$e'))),
         data: (user) {
           if (user == null) return const SizedBox.shrink();
+
+          final photoUrl = _normalizePhotoUrl(
+            FirebaseAuth.instance.currentUser?.photoURL,
+          );
 
           final firebaseUser = ref.read(authServiceProvider).currentUser;
           final providerIds =
               firebaseUser?.providerData.map((p) => p.providerId).toSet() ??
                   const <String>{};
           final isGoogle = providerIds.contains('google.com');
-          final isPasswordProvider = providerIds.contains('password');
 
           return ListView(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -82,59 +81,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      InkWell(
-                        borderRadius: BorderRadius.circular(44),
-                        onTap: _isUploadingAvatar
-                            ? null
-                            : () => _showAvatarPicker(context),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            CircleAvatar(
-                              radius: 44,
-                              backgroundImage: user.photoUrl != null
-                                  ? NetworkImage(user.photoUrl!)
-                                  : null,
-                              child: user.photoUrl == null
-                                  ? Text(
-                                      _initial(user.name, user.email),
-                                      style: tt.headlineLarge?.copyWith(
-                                        color: cs.onPrimaryContainer,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            if (_isUploadingAvatar)
-                              Container(
-                                width: 88,
-                                height: 88,
-                                decoration: BoxDecoration(
-                                  color: cs.surface.withValues(alpha: 0.65),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Padding(
-                                  padding: EdgeInsets.all(24),
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                  ),
-                                ),
+                      CircleAvatar(
+                        radius: 52,
+                        backgroundColor: cs.surfaceContainerHighest,
+                        backgroundImage:
+                            photoUrl != null ? NetworkImage(photoUrl) : null,
+                        child: photoUrl == null
+                            ? Icon(
+                                Icons.person,
+                                size: 52,
+                                color: cs.onSurfaceVariant,
                               )
-                            else
-                              Positioned(
-                                right: 0,
-                                bottom: 0,
-                                child: CircleAvatar(
-                                  radius: 14,
-                                  backgroundColor: cs.primary,
-                                  child: Icon(
-                                    Icons.camera_alt_outlined,
-                                    size: 14,
-                                    color: cs.onPrimary,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                            : null,
                       ),
                       const SizedBox(height: 16),
                       InkWell(
@@ -282,37 +240,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const SizedBox(height: 28),
               _SectionHeader(title: l10n.profileSectionActions),
               const SizedBox(height: 12),
-              Card(
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: Icon(Icons.password_outlined, color: cs.primary),
-                      title: Text(l10n.profileChangePassword),
-                      subtitle: Text(l10n.profileChangePasswordDescription),
-                      onTap: () => _handlePasswordReset(
-                        email: user.email,
-                        isPasswordProvider: isPasswordProvider,
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: Icon(
-                        Icons.alternate_email_outlined,
-                        color: cs.primary,
-                      ),
-                      title: Text(l10n.profileChangeEmail),
-                      subtitle: Text(l10n.profileChangeEmailDescription),
-                      onTap: () => _showChangeEmailDialog(
-                        currentEmail: user.email,
-                        isPasswordProvider: isPasswordProvider,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
               FilledButton.icon(
-                onPressed: () => ref.read(authServiceProvider).signOut(),
+                onPressed: _handleSignOut,
                 icon: const Icon(Icons.logout),
                 label: Text(l10n.commonSignOut),
                 style: FilledButton.styleFrom(
@@ -340,12 +269,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  String _initial(String name, String email) {
-    if (name.isNotEmpty) return name[0].toUpperCase();
-    if (email.isNotEmpty) return email[0].toUpperCase();
-    return '?';
-  }
-
   String _formatDuration(int totalSeconds) {
     if (totalSeconds < 60) return '${totalSeconds}s';
     final hours = totalSeconds ~/ 3600;
@@ -354,97 +277,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return '${minutes}m';
   }
 
-  Future<void> _showAvatarPicker(BuildContext context) async {
-    final l10n = context.l10n;
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(title: Text(l10n.profileChangeAvatar)),
-              if (!kIsWeb)
-                ListTile(
-                  leading: const Icon(Icons.camera_alt_outlined),
-                  title: Text(l10n.profileTakePhoto),
-                  onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
-                ),
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: Text(l10n.profileChooseFromGallery),
-                onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (source == null) return;
-
-    final file = await _imagePicker.pickImage(
-      source: source,
-      imageQuality: 85,
-      maxWidth: 1400,
-    );
-    if (file == null) return;
-
-    await _uploadAvatar(file);
-  }
-
-  Future<void> _uploadAvatar(XFile file) async {
-    final l10n = context.l10n;
-    final user = ref.read(authServiceProvider).currentUser;
-    if (user == null) return;
-
-    setState(() => _isUploadingAvatar = true);
-
-    try {
-      final bytes = await file.readAsBytes();
-      final contentType = _guessContentType(file.name);
-      final fileExt = _safeExtension(file.name);
-
-      final storageRef = FirebaseStorage.instance.ref().child(
-            'users/${user.uid}/avatar_${DateTime.now().millisecondsSinceEpoch}.$fileExt',
-          );
-
-      await storageRef.putData(
-        bytes,
-        SettableMetadata(contentType: contentType),
-      );
-      final downloadUrl = await storageRef.getDownloadURL();
-      await ref.read(authServiceProvider).updatePhotoUrl(downloadUrl);
-
-      if (mounted) {
-        _showSnackBar(l10n.profileAvatarUpdated);
-      }
-    } catch (e) {
-      if (mounted) {
-        _showSnackBar(l10n.profileAvatarUpdateFailed('$e'));
-      }
-    } finally {
-      if (mounted) setState(() => _isUploadingAvatar = false);
-    }
-  }
-
-  String _safeExtension(String filename) {
-    final parts = filename.split('.');
-    if (parts.length < 2) return 'jpg';
-    final ext = parts.last.toLowerCase();
-    if (ext.isEmpty) return 'jpg';
-    return ext;
-  }
-
-  String _guessContentType(String filename) {
-    final ext = _safeExtension(filename);
-    return switch (ext) {
-      'png' => 'image/png',
-      'gif' => 'image/gif',
-      'webp' => 'image/webp',
-      _ => 'image/jpeg',
-    };
+  String? _normalizePhotoUrl(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    return trimmed;
   }
 
   Future<void> _showEditNameDialog(
@@ -519,160 +355,102 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
     );
 
-    if (confirmed == true) {
-      try {
-        await ref.read(authServiceProvider).deleteAccount();
-      } catch (e) {
-        if (mounted) {
-          _showSnackBar(l10n.profileDeleteAccountFailed('$e'));
-        }
-      }
-    }
-  }
+    if (confirmed != true) return;
 
-  Future<void> _handlePasswordReset({
-    required String email,
-    required bool isPasswordProvider,
-  }) async {
-    final l10n = context.l10n;
-
-    if (!isPasswordProvider) {
-      _showSnackBar(l10n.profileChangePasswordUnavailable);
-      return;
-    }
-
-    try {
-      await ref.read(authServiceProvider).sendPasswordResetEmail(email);
-      if (mounted) {
-        _showSnackBar(l10n.profilePasswordResetSent(email));
-      }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        _showSnackBar(
-          l10n.profilePasswordResetFailed(_mapAuthError(context, e)),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        _showSnackBar(l10n.profilePasswordResetFailed('$e'));
-      }
-    }
-  }
-
-  Future<void> _showChangeEmailDialog({
-    required String currentEmail,
-    required bool isPasswordProvider,
-  }) async {
-    final l10n = context.l10n;
-
-    if (!isPasswordProvider) {
-      _showSnackBar(l10n.profileChangeEmailUnavailable);
-      return;
-    }
-
-    final formKey = GlobalKey<FormState>();
-    final passwordCtrl = TextEditingController();
-    final emailCtrl = TextEditingController(text: currentEmail);
-
-    final shouldSubmit = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.profileChangeEmail),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+    var loadingShown = false;
+    if (mounted) {
+      loadingShown = true;
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const AlertDialog(
+          content: Row(
             children: [
-              TextFormField(
-                controller: passwordCtrl,
-                decoration: InputDecoration(
-                  labelText: l10n.profileCurrentPasswordLabel,
-                ),
-                obscureText: true,
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return l10n.profileFieldRequired;
-                  }
-                  return null;
-                },
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2.2),
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: emailCtrl,
-                decoration: InputDecoration(
-                  labelText: l10n.profileNewEmailLabel,
-                ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return l10n.profileFieldRequired;
-                  }
-                  final email = v.trim();
-                  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-                    return l10n.profileInvalidEmail;
-                  }
-                  return null;
-                },
-              ),
+              SizedBox(width: 12),
+              Expanded(child: Text('Deleting account...')),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.commonCancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (!formKey.currentState!.validate()) return;
-              Navigator.of(ctx).pop(true);
-            },
-            child: Text(l10n.profileSendVerificationEmail),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldSubmit != true) {
-      passwordCtrl.dispose();
-      emailCtrl.dispose();
-      return;
+      );
     }
 
     try {
-      await ref.read(authServiceProvider).sendEmailChangeVerification(
-            currentPassword: passwordCtrl.text.trim(),
-            newEmail: emailCtrl.text.trim(),
-          );
-      if (mounted) {
-        _showSnackBar(l10n.profileEmailVerificationSent(emailCtrl.text.trim()));
+      await ref.read(authServiceProvider).deleteAccount();
+
+      // Ensure local session is cleared before redirecting.
+      await ref.read(authServiceProvider).signOut();
+
+      if (loadingShown && rootNavigator.mounted && rootNavigator.canPop()) {
+        rootNavigator.pop();
       }
+
+      if (!mounted) return;
+      _goToLoginWithMessage('ลบบัญชีเรียบร้อยแล้ว');
     } on FirebaseAuthException catch (e) {
+      if (loadingShown && rootNavigator.mounted && rootNavigator.canPop()) {
+        rootNavigator.pop();
+      }
+
+      if (e.code == 'requires-recent-login') {
+        await ref.read(authServiceProvider).signOut();
+        if (!mounted) return;
+        _goToLoginWithMessage('โปรดล็อกอินใหม่ก่อนลบบัญชีอีกครั้ง');
+        return;
+      }
+
       if (mounted) {
-        _showSnackBar(l10n.profileEmailChangeFailed(_mapAuthError(context, e)));
+        _showSnackBar(l10n.profileDeleteAccountFailed('$e'));
       }
     } catch (e) {
+      if (loadingShown && rootNavigator.mounted && rootNavigator.canPop()) {
+        rootNavigator.pop();
+      }
+
       if (mounted) {
-        _showSnackBar(l10n.profileEmailChangeFailed('$e'));
+        _showSnackBar(l10n.profileDeleteAccountFailed('$e'));
       }
     }
-    passwordCtrl.dispose();
-    emailCtrl.dispose();
   }
 
-  String _mapAuthError(BuildContext context, FirebaseAuthException e) {
-    final l10n = context.l10n;
-    return switch (e.code) {
-      'wrong-password' => l10n.profileAuthWrongPassword,
-      'invalid-credential' => l10n.profileAuthInvalidCredential,
-      'email-already-in-use' => l10n.profileAuthEmailInUse,
-      'invalid-email' => l10n.profileAuthInvalidEmail,
-      'requires-recent-login' => l10n.profileAuthRequiresRecentLogin,
-      'network-request-failed' => l10n.profileAuthNetwork,
-      'too-many-requests' => l10n.profileAuthTooManyRequests,
-      'user-disabled' => l10n.profileAuthUserDisabled,
-      _ => l10n.profileAuthGeneric(e.code),
-    };
+  void _goToLoginWithMessage(String message) {
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (_, animation, __) => FadeTransition(
+          opacity: animation,
+          child: LoginPage(initialSnackBarMessage: message),
+        ),
+        transitionDuration: const Duration(milliseconds: 280),
+      ),
+      (_) => false,
+    );
+  }
+
+  Future<void> _handleSignOut() async {
+    try {
+      await ref.read(authServiceProvider).signOut();
+      if (!mounted) return;
+
+      Navigator.of(context).pushAndRemoveUntil(
+        PageRouteBuilder(
+          pageBuilder: (_, animation, __) => FadeTransition(
+            opacity: animation,
+            child: const LoginPage(),
+          ),
+          transitionDuration: const Duration(milliseconds: 280),
+        ),
+        (_) => false,
+      );
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Sign out failed: $e');
+      }
+    }
   }
 
   void _showSnackBar(String message) {
@@ -757,44 +535,112 @@ class _ThemeModeTile extends ConsumerWidget {
     final mode = ref.watch(themeModeProvider);
     final cs = Theme.of(context).colorScheme;
     final l10n = context.l10n;
+    final isCompactWidth = MediaQuery.sizeOf(context).width < 420;
+    final segmentLabelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+          height: 1,
+          fontWeight: FontWeight.w600,
+        );
 
-    return ListTile(
-      leading: Icon(
-        mode == ThemeMode.dark
-            ? Icons.dark_mode_outlined
-            : mode == ThemeMode.light
-                ? Icons.light_mode_outlined
-                : Icons.brightness_auto_outlined,
-        color: cs.onSurface,
-      ),
-      title: Text(l10n.profileTheme),
-      trailing: SegmentedButton<ThemeMode>(
-        segments: [
-          ButtonSegment(
-            value: ThemeMode.light,
-            icon: const Icon(Icons.light_mode, size: 18),
-            label: Text(l10n.profileThemeLight),
+    final themeIcon = Icon(
+      mode == ThemeMode.dark
+          ? Icons.dark_mode_outlined
+          : mode == ThemeMode.light
+              ? Icons.light_mode_outlined
+              : Icons.brightness_auto_outlined,
+      color: cs.onSurface,
+    );
+
+    final themeModeSelector = SizedBox(
+      height: 38,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerRight,
+        child: SegmentedButton<ThemeMode>(
+          segments: [
+            ButtonSegment(
+              value: ThemeMode.light,
+              icon: const Icon(Icons.light_mode, size: 18),
+              label: Text(
+                l10n.profileThemeLight,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.fade,
+              ),
+            ),
+            ButtonSegment(
+              value: ThemeMode.system,
+              icon: const Icon(Icons.brightness_auto, size: 18),
+              label: Text(
+                l10n.profileThemeSystem,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.fade,
+              ),
+            ),
+            ButtonSegment(
+              value: ThemeMode.dark,
+              icon: const Icon(Icons.dark_mode, size: 18),
+              label: Text(
+                l10n.profileThemeDark,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.fade,
+              ),
+            ),
+          ],
+          selected: {mode},
+          onSelectionChanged: (s) =>
+              ref.read(themeModeProvider.notifier).setThemeMode(s.first),
+          showSelectedIcon: false,
+          style: ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            textStyle: MaterialStatePropertyAll(segmentLabelStyle),
+            padding: const MaterialStatePropertyAll(
+              EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
           ),
-          ButtonSegment(
-            value: ThemeMode.system,
-            icon: const Icon(Icons.brightness_auto, size: 18),
-            label: Text(l10n.profileThemeSystem),
-          ),
-          ButtonSegment(
-            value: ThemeMode.dark,
-            icon: const Icon(Icons.dark_mode, size: 18),
-            label: Text(l10n.profileThemeDark),
-          ),
-        ],
-        selected: {mode},
-        onSelectionChanged: (s) =>
-            ref.read(themeModeProvider.notifier).state = s.first,
-        showSelectedIcon: false,
-        style: const ButtonStyle(
-          visualDensity: VisualDensity.compact,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
       ),
+    );
+
+    if (isCompactWidth) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                themeIcon,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    l10n.profileTheme,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: themeModeSelector,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListTile(
+      leading: themeIcon,
+      title: Text(
+        l10n.profileTheme,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: themeModeSelector,
     );
   }
 }

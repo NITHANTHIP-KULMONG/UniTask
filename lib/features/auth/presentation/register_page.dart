@@ -2,15 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/app_scaffold.dart';
-import '../../../shared/widgets/primary_button.dart';
+import '../../../shared/widgets/custom_button.dart';
+import '../../../shared/widgets/custom_card.dart';
+import '../../../shared/widgets/custom_text_field.dart';
 import '../services/auth_service.dart';
 
-/// Email + password registration page.
-///
-/// All Firebase logic is delegated to [AuthService].
-/// On successful sign-up, [AuthGate] detects the new user via
-/// `authStateChanges` and navigates to [HomeShell] automatically.
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
 
@@ -33,10 +29,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     super.dispose();
   }
 
-  // ---------------------------------------------------------------------------
-  // Sign-up handler
-  // ---------------------------------------------------------------------------
-
   Future<void> _handleSignUp() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -47,8 +39,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             email: _emailCtrl.text.trim(),
             password: _passwordCtrl.text.trim(),
           );
-      // Pop register route so it's not left on the stack.
-      // AuthGate handles the rest.
       if (mounted) Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
       _showError(_mapErrorCode(e.code));
@@ -58,10 +48,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
 
   void _showError(String message) {
     if (!mounted) return;
@@ -82,103 +68,140 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     };
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
-
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Register',
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Create your account',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 32),
+    final tt = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
 
-            // Email
-            TextFormField(
-              controller: _emailCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                prefixIcon: Icon(Icons.email_outlined),
+    return Scaffold(
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              cs.primary.withValues(alpha: 0.08),
+              Theme.of(context).scaffoldBackgroundColor,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 320),
+                  tween: Tween<double>(begin: 0, end: 1),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, child) {
+                    return Opacity(
+                      opacity: value,
+                      child: Transform.translate(
+                        offset: Offset(0, (1 - value) * 12),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: CustomCard(
+                    padding: const EdgeInsets.all(24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Create your account',
+                            textAlign: TextAlign.center,
+                            style: tt.headlineSmall,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Set up your UniTask workspace in under a minute.',
+                            textAlign: TextAlign.center,
+                            style: tt.bodyMedium,
+                          ),
+                          const SizedBox(height: 24),
+                          CustomTextField(
+                            controller: _emailCtrl,
+                            label: 'Email',
+                            hintText: 'name@university.edu',
+                            prefixIcon: const Icon(Icons.alternate_email_rounded),
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            autofillHints: const [AutofillHints.email],
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Email is required.';
+                              }
+                              if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                                  .hasMatch(value.trim())) {
+                                return 'Enter a valid email address.';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          CustomTextField(
+                            controller: _passwordCtrl,
+                            label: 'Password',
+                            hintText: 'At least 6 characters',
+                            prefixIcon: const Icon(Icons.lock_outline_rounded),
+                            obscureText: true,
+                            textInputAction: TextInputAction.next,
+                            autofillHints: const [AutofillHints.newPassword],
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Password is required.';
+                              }
+                              if (value.trim().length < 6) {
+                                return 'Password must be at least 6 characters.';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          CustomTextField(
+                            controller: _confirmCtrl,
+                            label: 'Confirm password',
+                            hintText: 'Re-enter your password',
+                            prefixIcon: const Icon(Icons.lock_person_outlined),
+                            obscureText: true,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _handleSignUp(),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please confirm your password.';
+                              }
+                              if (value.trim() != _passwordCtrl.text.trim()) {
+                                return 'Passwords do not match.';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          CustomButton(
+                            label: 'Create account',
+                            onPressed: _handleSignUp,
+                            isLoading: _isLoading,
+                            icon: Icons.person_add_alt_1_rounded,
+                          ),
+                          const SizedBox(height: 10),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Already have an account? Login'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.email],
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Email is required.';
-                if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
-                  return 'Enter a valid email address.';
-                }
-                return null;
-              },
             ),
-            const SizedBox(height: 16),
-
-            // Password
-            TextFormField(
-              controller: _passwordCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                prefixIcon: Icon(Icons.lock_outlined),
-              ),
-              obscureText: true,
-              textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.newPassword],
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Password is required.';
-                }
-                if (v.trim().length < 6) {
-                  return 'Password must be at least 6 characters.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Confirm password
-            TextFormField(
-              controller: _confirmCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Confirm Password',
-                prefixIcon: Icon(Icons.lock_outlined),
-              ),
-              obscureText: true,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => _handleSignUp(),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Please confirm your password.';
-                }
-                if (v.trim() != _passwordCtrl.text.trim()) {
-                  return 'Passwords do not match.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Register button
-            PrimaryButton(
-              label: 'Register',
-              isLoading: _isLoading,
-              onPressed: _handleSignUp,
-            ),
-            const SizedBox(height: 16),
-
-            // Back to login
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Already have an account? Login'),
-            ),
-          ],
+          ),
         ),
       ),
     );

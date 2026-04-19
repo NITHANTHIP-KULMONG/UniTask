@@ -5,6 +5,7 @@ import 'package:unitask/l10n/app_localizations.dart';
 import 'core/preferences/app_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/auth_gate.dart';
+import 'features/auth/presentation/landing_page.dart';
 
 class UniTaskApp extends ConsumerWidget {
   const UniTaskApp({super.key});
@@ -17,17 +18,23 @@ class UniTaskApp extends ConsumerWidget {
     return MaterialApp(
       title: 'UniTask',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      // AuthGate is the single entry point:
-      //  - Not logged in → LoginPage
-      //  - Logged in + user  → UserHomePage
-      //  - Logged in + admin → AdminHomePage
-      home: const AuthGate(),
+      onGenerateRoute: (settings) {
+        if (settings.name == '/landingpage') {
+          return MaterialPageRoute<void>(
+            builder: (_) => const LandingPage(),
+          );
+        }
+
+        return MaterialPageRoute<void>(
+          builder: (_) => const AuthGate(),
+        );
+      },
     );
   }
 }

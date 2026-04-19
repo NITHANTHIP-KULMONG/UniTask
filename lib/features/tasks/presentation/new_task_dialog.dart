@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/custom_button.dart';
+import '../../../shared/widgets/custom_card.dart';
+import '../../../shared/widgets/custom_text_field.dart';
 import '../../subjects/presentation/subject_controller.dart';
 import '../services/task_service.dart';
 
@@ -83,106 +86,137 @@ class _NewTaskDialogState extends ConsumerState<NewTaskDialog> {
 
     final subjects = subjectsAsync.valueOrNull ?? const [];
     final canCreate = !_isSubmitting && _selectedSubjectId != null;
+    final cs = Theme.of(context).colorScheme;
 
     return AlertDialog(
       title: const Text('New Task'),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Title'),
-                textInputAction: TextInputAction.next,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Title is required.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
-                textInputAction: TextInputAction.newline,
-                maxLines: 3,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedSubjectId,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Subject'),
-                items: subjects
-                    .map(
-                      (subject) => DropdownMenuItem<String>(
-                        value: subject.id,
-                        child: Text(subject.name),
+      contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                CustomCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      CustomTextField(
+                        controller: _titleController,
+                        label: 'Title',
+                        hintText: 'What needs to be done?',
+                        textInputAction: TextInputAction.next,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Title is required.';
+                          }
+                          return null;
+                        },
                       ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  setState(() => _selectedSubjectId = value);
-                },
-                validator: (_) {
-                  if (_selectedSubjectId == null) {
-                    return 'Subject is required.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _selectedDueDate == null
-                          ? 'No due date'
-                          : MaterialLocalizations.of(context)
-                              .formatMediumDate(_selectedDueDate!),
-                    ),
+                      const SizedBox(height: 12),
+                      CustomTextField(
+                        controller: _descriptionController,
+                        label: 'Description',
+                        hintText: 'Optional notes',
+                        textInputAction: TextInputAction.newline,
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedSubjectId,
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'Subject'),
+                        items: subjects
+                            .map(
+                              (subject) => DropdownMenuItem<String>(
+                                value: subject.id,
+                                child: Text(subject.name),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() => _selectedSubjectId = value);
+                        },
+                        validator: (_) {
+                          if (_selectedSubjectId == null) {
+                            return 'Subject is required.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _selectedDueDate == null
+                                    ? 'No due date'
+                                    : MaterialLocalizations.of(context)
+                                        .formatMediumDate(_selectedDueDate!),
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _pickDueDate,
+                              child: const Text('Pick date'),
+                            ),
+                            if (_selectedDueDate != null)
+                              IconButton(
+                                tooltip: 'Clear due date',
+                                onPressed: () {
+                                  setState(() => _selectedDueDate = null);
+                                },
+                                icon: const Icon(Icons.clear_rounded),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  TextButton(
-                    onPressed: _pickDueDate,
-                    child: const Text('Pick Due Date'),
-                  ),
-                  if (_selectedDueDate != null)
-                    IconButton(
-                      tooltip: 'Clear due date',
-                      onPressed: () {
-                        setState(() => _selectedDueDate = null);
-                      },
-                      icon: const Icon(Icons.clear),
-                    ),
-                ],
-              ),
-              if (subjectsAsync.isLoading)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: LinearProgressIndicator(),
                 ),
-            ],
+                if (subjectsAsync.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 12),
+                    child: LinearProgressIndicator(),
+                  ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed:
+                            _isSubmitting ? null : () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: CustomButton(
+                        label: 'Create',
+                        onPressed: canCreate ? _createTask : null,
+                        isLoading: _isSubmitting,
+                        icon: Icons.add_task_rounded,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: canCreate ? _createTask : null,
-          child: _isSubmitting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Create'),
-        ),
-      ],
     );
   }
 }
