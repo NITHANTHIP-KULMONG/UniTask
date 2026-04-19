@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_card.dart';
 import '../../../shared/widgets/custom_text_field.dart';
+
 import '../../subjects/presentation/subject_controller.dart';
 import '../services/task_service.dart';
 
@@ -20,7 +22,7 @@ class _NewTaskDialogState extends ConsumerState<NewTaskDialog> {
   final _descriptionController = TextEditingController();
 
   String? _selectedSubjectId;
-  DateTime? _selectedDueDate;
+  DateTime? _selectedDueDateTime;
   bool _isSubmitting = false;
 
   @override
@@ -30,14 +32,14 @@ class _NewTaskDialogState extends ConsumerState<NewTaskDialog> {
     super.dispose();
   }
 
-  Future<void> _pickDueDate() async {
+  Future<void> _pickDueDateTime() async {
     final now = DateTime.now();
     final today = DateUtils.dateOnly(now);
-    final firstDate = DateTime.now();
+    final firstDate = today;
 
-    final initialDate = _selectedDueDate != null &&
-            !DateUtils.dateOnly(_selectedDueDate!).isBefore(today)
-        ? _selectedDueDate!
+    final initialDate = _selectedDueDateTime != null &&
+            !DateUtils.dateOnly(_selectedDueDateTime!).isBefore(today)
+        ? _selectedDueDateTime!
         : today;
 
     final picked = await showDatePicker(
@@ -50,8 +52,32 @@ class _NewTaskDialogState extends ConsumerState<NewTaskDialog> {
     if (picked == null) return;
     if (DateUtils.dateOnly(picked).isBefore(today)) return;
 
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: _selectedDueDateTime != null
+          ? TimeOfDay.fromDateTime(_selectedDueDateTime!)
+          : const TimeOfDay(hour: 18, minute: 0),
+    );
+
+    final safeTime = pickedTime ?? const TimeOfDay(hour: 18, minute: 0);
+    final selectedDateTime = DateTime(
+      picked.year,
+      picked.month,
+      picked.day,
+      safeTime.hour,
+      safeTime.minute,
+    );
+
+    if (!selectedDateTime.isAfter(DateTime.now())) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a future date and time.')),
+      );
+      return;
+    }
+
     setState(() {
-      _selectedDueDate = DateUtils.dateOnly(picked);
+      _selectedDueDateTime = selectedDateTime;
     });
   }
 
@@ -66,7 +92,7 @@ class _NewTaskDialogState extends ConsumerState<NewTaskDialog> {
             title: _titleController.text.trim(),
             description: _descriptionController.text.trim(),
             subjectId: _selectedSubjectId!,
-            dueDate: _selectedDueDate,
+            dueDateTime: _selectedDueDateTime,
           );
 
       if (!mounted) return;
@@ -161,22 +187,22 @@ class _NewTaskDialogState extends ConsumerState<NewTaskDialog> {
                           children: [
                             Expanded(
                               child: Text(
-                                _selectedDueDate == null
+                                _selectedDueDateTime == null
                                     ? 'No due date'
-                                    : MaterialLocalizations.of(context)
-                                        .formatMediumDate(_selectedDueDate!),
+                                    : DateFormat('MMM d, HH:mm')
+                                        .format(_selectedDueDateTime!),
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ),
                             TextButton(
-                              onPressed: _pickDueDate,
-                              child: const Text('Pick date'),
+                              onPressed: _pickDueDateTime,
+                              child: const Text('Pick date & time'),
                             ),
-                            if (_selectedDueDate != null)
+                            if (_selectedDueDateTime != null)
                               IconButton(
                                 tooltip: 'Clear due date',
                                 onPressed: () {
-                                  setState(() => _selectedDueDate = null);
+                                  setState(() => _selectedDueDateTime = null);
                                 },
                                 icon: const Icon(Icons.clear_rounded),
                               ),
@@ -196,8 +222,9 @@ class _NewTaskDialogState extends ConsumerState<NewTaskDialog> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed:
-                            _isSubmitting ? null : () => Navigator.of(context).pop(),
+                        onPressed: _isSubmitting
+                            ? null
+                            : () => Navigator.of(context).pop(),
                         child: const Text('Cancel'),
                       ),
                     ),

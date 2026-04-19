@@ -78,9 +78,9 @@ class TaskDetailScreen extends ConsumerWidget {
                   _DetailRow(
                     icon: Icons.calendar_today_outlined,
                     label: 'Due date',
-                    value: task.dueDate == null
+                    value: task.dueDateTime == null
                         ? 'No due date'
-                        : DateFormat.yMMMd().format(task.dueDate!),
+                        : DateFormat('MMM d, HH:mm').format(task.dueDateTime!),
                   ),
                   const SizedBox(height: 16),
                   _DetailRow(

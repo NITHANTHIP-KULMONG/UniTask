@@ -9,6 +9,7 @@ import 'core/preferences/app_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/auth_gate.dart';
 import 'features/auth/presentation/landing_page.dart';
+import 'features/tasks/services/notification_service.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 
@@ -23,6 +24,8 @@ Future<void> main() async {
     usePathUrlStrategy();
     await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
   }
+
+  await NotificationService.instance.initialize();
 
   runApp(const ProviderScope(child: MyApp()));
 }

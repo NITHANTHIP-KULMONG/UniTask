@@ -26,7 +26,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
   bool _isReady = false;
   bool _isSaving = false;
   String? _selectedSubjectId;
-  DateTime? _selectedDueDate;
+  DateTime? _selectedDueDateTime;
 
   @override
   void dispose() {
@@ -51,7 +51,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
       _titleController.text = task.title;
       _descriptionController.text = task.description;
       _selectedSubjectId = task.subjectId;
-      _selectedDueDate = task.dueDate;
+      _selectedDueDateTime = task.dueDateTime;
       _isReady = true;
     }
     final selectedSubjectValue = subjects.any((s) => s.id == _selectedSubjectId)
@@ -135,18 +135,18 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
                           ),
                           const SizedBox(height: 8),
                           OutlinedButton.icon(
-                            onPressed: _pickDueDate,
+                            onPressed: _pickDueDateTime,
                             icon: const Icon(Icons.calendar_today_outlined),
                             label: Text(
-                              _selectedDueDate == null
+                              _selectedDueDateTime == null
                                   ? 'No due date'
-                                  : 'Due ${DateFormat.yMMMd().format(_selectedDueDate!)}',
+                                  : 'Due ${DateFormat('MMM d, HH:mm').format(_selectedDueDateTime!)}',
                             ),
                           ),
-                          if (_selectedDueDate != null)
+                          if (_selectedDueDateTime != null)
                             TextButton.icon(
                               onPressed: () {
-                                setState(() => _selectedDueDate = null);
+                                setState(() => _selectedDueDateTime = null);
                               },
                               icon: const Icon(Icons.clear),
                               label: const Text('Clear due date'),
@@ -199,21 +199,49 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
     return null;
   }
 
-  Future<void> _pickDueDate() async {
+  Future<void> _pickDueDateTime() async {
     final now = DateTime.now();
-    final initial = _selectedDueDate ?? now;
+    final today = DateUtils.dateOnly(now);
+    final initial = _selectedDueDateTime != null &&
+            !DateUtils.dateOnly(_selectedDueDateTime!).isBefore(today)
+        ? _selectedDueDateTime!
+        : now;
 
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
-      firstDate: DateTime(2000),
+      firstDate: today,
       lastDate: DateTime(2100),
     );
 
     if (picked == null) return;
 
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: _selectedDueDateTime != null
+          ? TimeOfDay.fromDateTime(_selectedDueDateTime!)
+          : const TimeOfDay(hour: 18, minute: 0),
+    );
+
+    final safeTime = pickedTime ?? const TimeOfDay(hour: 18, minute: 0);
+    final selectedDateTime = DateTime(
+      picked.year,
+      picked.month,
+      picked.day,
+      safeTime.hour,
+      safeTime.minute,
+    );
+
+    if (!selectedDateTime.isAfter(DateTime.now())) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a future date and time.')),
+      );
+      return;
+    }
+
     setState(() {
-      _selectedDueDate = DateUtils.dateOnly(picked);
+      _selectedDueDateTime = selectedDateTime;
     });
   }
 
@@ -228,7 +256,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
         'subjectId': _selectedSubjectId!,
-        'dueDate': _selectedDueDate,
+        'dueDateTime': _selectedDueDateTime,
       });
 
       if (!mounted) return;

@@ -47,7 +47,7 @@ class Task {
     required this.userId,
     required this.subjectId,
     required this.status,
-    this.dueDate,
+    this.dueDateTime,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -59,7 +59,7 @@ class Task {
   final String userId;
   final String subjectId;
   final TaskStatus status;
-  final DateTime? dueDate;
+  final DateTime? dueDateTime;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -85,7 +85,9 @@ class Task {
       userId: json['ownerId'] as String? ?? '',
       subjectId: json['subjectId'] as String? ?? '',
       status: status,
-      dueDate: _toDateTime(json['dueDate']),
+      dueDateTime: _normalizeDueDateTime(
+        _toDateTime(json['dueDateTime'] ?? json['dueDate']),
+      ),
       createdAt: created,
       updatedAt: _toDateTime(json['updatedAt']) ?? created,
     );
@@ -102,7 +104,8 @@ class Task {
       'ownerId': userId,
       'subjectId': subjectId,
       'status': normalizedStatus.name,
-      'dueDate': dueDate == null ? null : Timestamp.fromDate(dueDate!),
+      'dueDateTime':
+          dueDateTime == null ? null : Timestamp.fromDate(dueDateTime!),
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -119,8 +122,8 @@ class Task {
     String? userId,
     String? subjectId,
     TaskStatus? status,
-    DateTime? dueDate,
-    bool clearDueDate = false,
+    DateTime? dueDateTime,
+    bool clearDueDateTime = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -132,10 +135,23 @@ class Task {
       userId: userId ?? this.userId,
       subjectId: subjectId ?? this.subjectId,
       status: status ?? this.status,
-      dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
+      dueDateTime: clearDueDateTime ? null : (dueDateTime ?? this.dueDateTime),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+
+  static DateTime? _normalizeDueDateTime(DateTime? value) {
+    if (value == null) return null;
+
+    final hasTime = value.hour != 0 ||
+        value.minute != 0 ||
+        value.second != 0 ||
+        value.millisecond != 0 ||
+        value.microsecond != 0;
+
+    if (hasTime) return value;
+    return DateTime(value.year, value.month, value.day, 18, 0);
   }
 
   static DateTime? _toDateTime(Object? value) {

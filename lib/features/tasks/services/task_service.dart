@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/services/auth_service.dart';
 import '../models/task.dart';
+import 'notification_service.dart';
 
 // =============================================================================
 // Constants
@@ -74,12 +75,18 @@ final allTasksProvider = StreamProvider<List<Task>>((ref) {
 /// All indexes are defined in `firestore.indexes.json` and deployed via
 /// `firebase deploy --only firestore:indexes`.
 class TaskService {
-  TaskService({FirebaseFirestore? firestore, FirebaseAuth? auth})
-      : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+  TaskService({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+    NotificationService? notificationService,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _auth = auth ?? FirebaseAuth.instance,
+        _notificationService =
+            notificationService ?? NotificationService.instance;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+  final NotificationService _notificationService;
 
   CollectionReference<Map<String, dynamic>> get _tasksCol =>
       _firestore.collection('tasks');
@@ -90,31 +97,43 @@ class TaskService {
 
   /// Creates a new task for the currently authenticated user.
   ///
-  /// `dueDate` is optional and stored as a Firestore [Timestamp] when present.
+  /// `dueDateTime` is optional and stored as a Firestore [Timestamp] when present.
   /// Both `createdAt` and `updatedAt` use server timestamps so they are
   /// consistent regardless of client clock skew.
   Future<DocumentReference<Map<String, dynamic>>> createTask({
     required String title,
     required String description,
     required String subjectId,
-    DateTime? dueDate,
-  }) {
+    DateTime? dueDateTime,
+  }) async {
     final ownerId = _auth.currentUser?.uid;
     if (ownerId == null || ownerId.isEmpty) {
       throw StateError('Cannot create task without an authenticated user.');
     }
 
-    return _tasksCol.add({
+    final createdRef = await _tasksCol.add({
       'title': title,
       'description': description,
       'ownerId': ownerId,
       'subjectId': subjectId,
       'isCompleted': false,
       'status': TaskStatus.todo.name,
-      'dueDate': dueDate == null ? null : Timestamp.fromDate(dueDate),
+      'dueDateTime': dueDateTime == null
+          ? null
+          : Timestamp.fromDate(_normalizeDueDateTime(dueDateTime)),
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    await _syncTaskNotification(
+      taskId: createdRef.id,
+      dueDateTime:
+          dueDateTime == null ? null : _normalizeDueDateTime(dueDateTime),
+      status: TaskStatus.todo,
+      isCompleted: false,
+    );
+
+    return createdRef;
   }
 
   // ---------------------------------------------------------------------------
@@ -196,20 +215,57 @@ class TaskService {
 
   /// Updates arbitrary fields on a task document.
   ///
-  /// Converts `dueDate: DateTime` into Firestore [Timestamp] automatically.
+  /// Converts `dueDateTime: DateTime` into Firestore [Timestamp] automatically.
   /// Always writes `updatedAt` so the composite index
   /// `(status ASC, updatedAt DESC)` stays useful for "recently changed" views.
-  Future<void> updateTask(String taskId, Map<String, dynamic> data) {
+  Future<void> updateTask(String taskId, Map<String, dynamic> data) async {
     final normalized = Map<String, dynamic>.from(data);
-    final dueDate = normalized['dueDate'];
-    if (dueDate is DateTime) {
-      normalized['dueDate'] = Timestamp.fromDate(dueDate);
+
+    if (normalized.containsKey('dueDate') &&
+        !normalized.containsKey('dueDateTime')) {
+      normalized['dueDateTime'] = normalized.remove('dueDate');
     }
 
-    return _tasksCol.doc(taskId).update({
+    final docRef = _tasksCol.doc(taskId);
+    final snapshot = await docRef.get();
+    final snapshotData = snapshot.data();
+    final existingTask = snapshotData == null
+        ? null
+        : Task.fromJson(snapshotData, id: snapshot.id);
+
+    final containsDueDateTime = normalized.containsKey('dueDateTime');
+    final dueDateTimeValue = normalized['dueDateTime'];
+    if (dueDateTimeValue is DateTime) {
+      normalized['dueDateTime'] =
+          Timestamp.fromDate(_normalizeDueDateTime(dueDateTimeValue));
+    }
+
+    final extractedDueDateTime = _extractDateTime(dueDateTimeValue);
+    final nextDueDateTime = containsDueDateTime
+        ? (extractedDueDateTime == null
+            ? null
+            : _normalizeDueDateTime(extractedDueDateTime))
+        : existingTask?.dueDateTime;
+    final nextStatus = normalized.containsKey('status')
+        ? TaskStatus.fromString(normalized['status'] as String?)
+        : (existingTask?.status ?? TaskStatus.todo);
+    final nextIsCompleted = ((normalized.containsKey('isCompleted')
+                ? normalized['isCompleted'] as bool?
+                : existingTask?.isCompleted) ??
+            false) ||
+        nextStatus == TaskStatus.done;
+
+    await docRef.update({
       ...normalized,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    await _syncTaskNotification(
+      taskId: taskId,
+      dueDateTime: nextDueDateTime,
+      status: nextStatus,
+      isCompleted: nextIsCompleted,
+    );
   }
 
   /// Convenience: update only the status.
@@ -224,7 +280,47 @@ class TaskService {
   // Delete
   // ---------------------------------------------------------------------------
 
-  Future<void> deleteTask(String taskId) {
-    return _tasksCol.doc(taskId).delete();
+  Future<void> deleteTask(String taskId) async {
+    await _notificationService.cancelNotification(taskId.hashCode);
+    await _tasksCol.doc(taskId).delete();
+  }
+
+  Future<void> _syncTaskNotification({
+    required String taskId,
+    required DateTime? dueDateTime,
+    required TaskStatus status,
+    required bool isCompleted,
+  }) async {
+    final notificationId = taskId.hashCode;
+
+    if (dueDateTime == null || isCompleted || status == TaskStatus.done) {
+      await _notificationService.cancelNotification(notificationId);
+      return;
+    }
+
+    await _notificationService.scheduleTaskReminder(
+      id: notificationId,
+      dueDateTime: dueDateTime,
+      title: 'Task Reminder',
+      body: 'Your task is due soon',
+      reminderOffset: const Duration(hours: 1),
+    );
+  }
+
+  DateTime _normalizeDueDateTime(DateTime value) {
+    final hasTime = value.hour != 0 ||
+        value.minute != 0 ||
+        value.second != 0 ||
+        value.millisecond != 0 ||
+        value.microsecond != 0;
+
+    if (hasTime) return value;
+    return DateTime(value.year, value.month, value.day, 18, 0);
+  }
+
+  DateTime? _extractDateTime(Object? value) {
+    if (value is DateTime) return value;
+    if (value is Timestamp) return value.toDate();
+    return null;
   }
 }

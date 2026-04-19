@@ -82,7 +82,8 @@ class _AssignmentsTabState extends ConsumerState<AssignmentsTab> {
                     color: Theme.of(context).colorScheme.error,
                   ),
                   const SizedBox(height: 12),
-                  Text('Failed to load tasks.\n$e', textAlign: TextAlign.center),
+                  Text('Failed to load tasks.\n$e',
+                      textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   CustomButton(
                     label: 'Retry',
@@ -226,9 +227,9 @@ class _AssignmentsTabState extends ConsumerState<AssignmentsTab> {
       if (q.isEmpty) return true;
 
       final subjectName = (subjectNameById[task.subjectId] ?? '').toLowerCase();
-      final dueLabel = task.dueDate == null
+      final dueLabel = task.dueDateTime == null
           ? ''
-          : DateFormat('MMM d, y').format(task.dueDate!).toLowerCase();
+          : DateFormat('MMM d, HH:mm').format(task.dueDateTime!).toLowerCase();
 
       return task.title.toLowerCase().contains(q) ||
           task.description.toLowerCase().contains(q) ||
@@ -241,8 +242,8 @@ class _AssignmentsTabState extends ConsumerState<AssignmentsTab> {
         return b.updatedAt.compareTo(a.updatedAt);
       }
 
-      final da = a.dueDate == null ? null : DateUtils.dateOnly(a.dueDate!);
-      final db = b.dueDate == null ? null : DateUtils.dateOnly(b.dueDate!);
+      final da = a.dueDateTime;
+      final db = b.dueDateTime;
 
       if (da == null && db == null) {
         return b.createdAt.compareTo(a.createdAt);
@@ -262,7 +263,7 @@ class _AssignmentsTabState extends ConsumerState<AssignmentsTab> {
 
     final today = DateUtils.dateOnly(DateTime.now());
     final dueDate =
-        task.dueDate == null ? null : DateUtils.dateOnly(task.dueDate!);
+        task.dueDateTime == null ? null : DateUtils.dateOnly(task.dueDateTime!);
 
     if (dueDate != null && dueDate.isAfter(today)) {
       return _TaskSection.upcoming;
@@ -422,8 +423,9 @@ class _TaskCard extends ConsumerWidget {
 
     final subtitleParts = <String>[];
     if (subjectName.isNotEmpty) subtitleParts.add(subjectName);
-    if (task.dueDate != null) {
-      subtitleParts.add('Due ${DateFormat.yMMMd().format(task.dueDate!)}');
+    if (task.dueDateTime != null) {
+      subtitleParts
+          .add('Due ${DateFormat('MMM d, HH:mm').format(task.dueDateTime!)}');
     }
     final subtitle = subtitleParts.join(' - ');
 
@@ -620,7 +622,7 @@ _DueBadgeData _buildDueBadge(Task task, ColorScheme cs) {
     );
   }
 
-  if (task.dueDate == null) {
+  if (task.dueDateTime == null) {
     return _DueBadgeData(
       label: 'No date',
       background: cs.surfaceContainerHighest,
@@ -629,7 +631,7 @@ _DueBadgeData _buildDueBadge(Task task, ColorScheme cs) {
   }
 
   final today = DateUtils.dateOnly(DateTime.now());
-  final due = DateUtils.dateOnly(task.dueDate!);
+  final due = DateUtils.dateOnly(task.dueDateTime!);
 
   if (due.isAtSameMomentAs(today)) {
     return _DueBadgeData(
