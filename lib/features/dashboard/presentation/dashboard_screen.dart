@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:unitask/l10n/app_localizations.dart';
 
 import '../../../core/l10n/l10n.dart';
+import '../../../shared/widgets/app_loading_screen.dart';
 import '../../auth/services/auth_service.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../subjects/presentation/subject_controller.dart';
@@ -16,7 +17,7 @@ import '../../timer/services/study_session_service.dart';
 ///
 /// Shows:
 ///  • Greeting with avatar in the AppBar
-///  • Task summary (to do / doing / done) with progress bar
+///  • Task summary (to do / done) with progress bar
 ///  • Quick-action buttons to navigate other tabs
 ///  • Timer time today
 ///  • Active (non-done) tasks list with "View all" link
@@ -41,7 +42,9 @@ class DashboardScreen extends ConsumerWidget {
           data: (u) => u?.name.isNotEmpty == true ? u!.name : u?.email,
         ) ??
         '';
-    final photoUrl = appUserAsync.whenOrNull(data: (u) => u?.photoUrl);
+    final photoUrl = _normalizePhotoUrl(
+      appUserAsync.whenOrNull(data: (u) => u?.photoUrl),
+    );
     final firstName =
         displayName.trim().isNotEmpty ? displayName.split(' ').first : '';
 
@@ -60,22 +63,19 @@ class DashboardScreen extends ConsumerWidget {
               },
               child: CircleAvatar(
                 radius: 18,
-                backgroundImage:
+                foregroundImage:
                     photoUrl != null ? NetworkImage(photoUrl) : null,
-                child: photoUrl == null
-                    ? Text(
-                        (displayName.isNotEmpty ? displayName[0] : '?')
-                            .toUpperCase(),
-                        style: const TextStyle(fontSize: 14),
-                      )
-                    : null,
+                child: Text(
+                  (displayName.isNotEmpty ? displayName[0] : '?').toUpperCase(),
+                  style: const TextStyle(fontSize: 14),
+                ),
               ),
             ),
           ),
         ],
       ),
       body: tasksAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const AppLoadingScreen(message: 'Loading dashboard...'),
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -103,8 +103,6 @@ class DashboardScreen extends ConsumerWidget {
           final total = tasks.length;
           final todoCount =
               tasks.where((t) => t.status == TaskStatus.todo).length;
-          final doingCount =
-              tasks.where((t) => t.status == TaskStatus.doing).length;
           final doneCount =
               tasks.where((t) => t.status == TaskStatus.done).length;
           final progress = total == 0 ? 0.0 : doneCount / total;
@@ -146,12 +144,6 @@ class DashboardScreen extends ConsumerWidget {
                             child: _Stat(
                               value: '$todoCount',
                               label: l10n.dashboardTodoLabel,
-                            ),
-                          ),
-                          Expanded(
-                            child: _Stat(
-                              value: '$doingCount',
-                              label: l10n.dashboardDoingLabel,
                             ),
                           ),
                           Expanded(
@@ -298,6 +290,12 @@ class DashboardScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+String? _normalizePhotoUrl(String? value) {
+  final trimmed = value?.trim();
+  if (trimmed == null || trimmed.isEmpty) return null;
+  return trimmed;
 }
 
 // =============================================================================

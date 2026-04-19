@@ -2,15 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/services/auth_service.dart';
+import '../../tasks/models/task.dart';
+import '../../tasks/services/task_service.dart';
 import '../domain/subject.dart';
 import 'subject_controller.dart';
 
-class SubjectsScreen extends ConsumerWidget {
+class SubjectsScreen extends ConsumerStatefulWidget {
   const SubjectsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SubjectsScreen> createState() => _SubjectsScreenState();
+}
+
+class _SubjectsScreenState extends ConsumerState<SubjectsScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      final next = _searchController.text.trim();
+      if (next == _query) return;
+      setState(() => _query = next);
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final subjectsAsync = ref.watch(userSubjectsProvider);
+    final tasks = ref.watch(userTasksProvider).valueOrNull ?? const [];
 
     return Scaffold(
       appBar: AppBar(
@@ -45,61 +72,130 @@ class SubjectsScreen extends ConsumerWidget {
           ),
         ),
         data: (subjects) {
-          if (subjects.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.menu_book_outlined,
-                        size: 64,
-                        color: Theme.of(context).colorScheme.outline),
-                    const SizedBox(height: 16),
-                    Text('No subjects yet',
-                        style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tap the + button to add your first subject.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+          final q = _query.toLowerCase();
+          final filtered = q.isEmpty
+              ? subjects
+              : subjects
+                  .where((s) => s.name.toLowerCase().contains(q))
+                  .toList();
+
+          final activeTaskCountBySubject = <String, int>{};
+          for (final task in tasks) {
+            if (task.status == TaskStatus.done || task.isCompleted) continue;
+            activeTaskCountBySubject.update(
+              task.subjectId,
+              (v) => v + 1,
+              ifAbsent: () => 1,
             );
           }
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: subjects.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final subject = subjects[index];
-              return Card(
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor:
-                        subject.color.color.withValues(alpha: 0.15),
-                    child: Icon(Icons.circle,
-                        size: 16, color: subject.color.color),
-                  ),
-                  title: Text(
-                    subject.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onTap: () => _openEditDialog(context, ref, subject),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () => _confirmDelete(context, ref, subject),
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search subjects',
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   ),
                 ),
-              );
-            },
+              ),
+              Expanded(
+                child: subjects.isEmpty
+                    ? const _SubjectsEmptyState(
+                        icon: Icons.menu_book_outlined,
+                        title: 'No subjects yet',
+                        message: 'Tap the + button to add your first subject.',
+                      )
+                    : filtered.isEmpty
+                        ? const _SubjectsEmptyState(
+                            icon: Icons.search_off,
+                            title: 'No matching subjects',
+                            message:
+                                'Try a different keyword to find your subject.',
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final subject = filtered[index];
+                              final count =
+                                  activeTaskCountBySubject[subject.id] ?? 0;
+                              final countText =
+                                  '$count assignment${count == 1 ? '' : 's'}';
+
+                              return Card(
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 6,
+                                  ),
+                                  leading: Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: subject.color.color,
+                                    ),
+                                  ),
+                                  title: Text(
+                                    subject.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                  subtitle: Text(
+                                    countText,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                  ),
+                                  onTap: () =>
+                                      _openEditDialog(context, ref, subject),
+                                  trailing: PopupMenuButton<_SubjectAction>(
+                                    tooltip: 'More',
+                                    onSelected: (action) {
+                                      if (action == _SubjectAction.edit) {
+                                        _openEditDialog(context, ref, subject);
+                                        return;
+                                      }
+                                      _confirmDelete(context, ref, subject);
+                                    },
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(
+                                        value: _SubjectAction.edit,
+                                        child: Text('Edit'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: _SubjectAction.delete,
+                                        child: Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+              ),
+            ],
           );
         },
       ),
@@ -218,6 +314,45 @@ class SubjectsScreen extends ConsumerWidget {
         );
       }
     }
+  }
+}
+
+enum _SubjectAction { edit, delete }
+
+class _SubjectsEmptyState extends StatelessWidget {
+  const _SubjectsEmptyState({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 64, color: Theme.of(context).colorScheme.outline),
+            const SizedBox(height: 16),
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

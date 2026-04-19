@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:math';
 
 import '../models/app_user.dart';
 
@@ -85,6 +86,18 @@ class AuthService {
   /// Reference to the `users` collection — single source of truth.
   CollectionReference<Map<String, dynamic>> get _usersCol =>
       _firestore.collection('users');
+
+  CollectionReference<Map<String, dynamic>> get _mailCol =>
+      _firestore.collection('mail');
+
+  DocumentReference<Map<String, dynamic>> _otpDocRef({
+    required String uid,
+    required String action,
+  }) {
+    return _usersCol.doc(uid).collection('otps').doc(action);
+  }
+
+  final Random _random = Random.secure();
 
   // ---------------------------------------------------------------------------
   // Auth state
@@ -240,6 +253,9 @@ class AuthService {
     // Update Firebase Auth profile
     await user.updateDisplayName(newName);
 
+    // Ensure profile document exists for accounts created before this flow.
+    await ensureUserDocument(user);
+
     // Update Firestore user document
     await _usersCol.doc(user.uid).set({
       'name': newName,
@@ -252,9 +268,17 @@ class AuthService {
     if (user == null) return;
 
     await user.updatePhotoURL(photoUrl);
+
+    // Ensure profile document exists before merge-write.
+    await ensureUserDocument(user);
+
     await _usersCol.doc(user.uid).set({
       'photoUrl': photoUrl,
+      'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
+    // Refresh in-memory auth user so consumers see the latest profile quickly.
+    await user.reload();
   }
 
   // ---------------------------------------------------------------------------
@@ -266,6 +290,173 @@ class AuthService {
   /// This is the secure password-change flow for end users.
   Future<void> sendPasswordResetEmail(String email) {
     return _auth.sendPasswordResetEmail(email: email);
+  }
+
+  /// Sends a 6-digit OTP to the current account email for password change.
+  ///
+  /// This requires the user to re-authenticate with [currentPassword].
+  Future<void> sendPasswordChangeCode({
+    required String currentPassword,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'not-authenticated',
+        message: 'No authenticated user found.',
+      );
+    }
+
+    final email = user.email;
+    if (email == null || email.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'missing-email',
+        message: 'Current account email is missing.',
+      );
+    }
+
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(credential);
+
+    final code = _generateCode();
+    final expiresAt = DateTime.now().add(const Duration(minutes: 10));
+
+    await _otpDocRef(uid: user.uid, action: 'password_change').set({
+      'code': code,
+      'action': 'password_change',
+      'targetEmail': email,
+      'createdAt': FieldValue.serverTimestamp(),
+      'expiresAt': Timestamp.fromDate(expiresAt),
+      'attempts': 0,
+    });
+
+    await _sendOtpEmail(
+      to: email,
+      code: code,
+      actionLabel: 'password change',
+    );
+  }
+
+  /// Verifies a 6-digit OTP and updates password.
+  Future<void> confirmPasswordChangeCode({
+    required String code,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'not-authenticated',
+        message: 'No authenticated user found.',
+      );
+    }
+
+    final docRef = _otpDocRef(uid: user.uid, action: 'password_change');
+    final snap = await docRef.get();
+
+    if (!snap.exists || snap.data() == null) {
+      throw FirebaseAuthException(
+        code: 'code-not-found',
+        message: 'Verification code not found. Please request a new one.',
+      );
+    }
+
+    final data = snap.data()!;
+    _validateOtp(data, code);
+
+    await user.updatePassword(newPassword);
+    await docRef.delete();
+  }
+
+  /// Sends a 6-digit OTP to [newEmail] for email change.
+  ///
+  /// This requires current password re-authentication.
+  Future<void> sendEmailChangeCode({
+    required String currentPassword,
+    required String newEmail,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'not-authenticated',
+        message: 'No authenticated user found.',
+      );
+    }
+
+    final oldEmail = user.email;
+    if (oldEmail == null || oldEmail.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'missing-email',
+        message: 'Current account email is missing.',
+      );
+    }
+
+    final credential = EmailAuthProvider.credential(
+      email: oldEmail,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(credential);
+
+    final code = _generateCode();
+    final expiresAt = DateTime.now().add(const Duration(minutes: 10));
+
+    await _otpDocRef(uid: user.uid, action: 'email_change').set({
+      'code': code,
+      'action': 'email_change',
+      'targetEmail': newEmail.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
+      'expiresAt': Timestamp.fromDate(expiresAt),
+      'attempts': 0,
+    });
+
+    await _sendOtpEmail(
+      to: newEmail.trim(),
+      code: code,
+      actionLabel: 'email change',
+    );
+  }
+
+  /// Verifies a 6-digit OTP and updates account email.
+  Future<void> confirmEmailChangeCode({
+    required String code,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'not-authenticated',
+        message: 'No authenticated user found.',
+      );
+    }
+
+    final docRef = _otpDocRef(uid: user.uid, action: 'email_change');
+    final snap = await docRef.get();
+
+    if (!snap.exists || snap.data() == null) {
+      throw FirebaseAuthException(
+        code: 'code-not-found',
+        message: 'Verification code not found. Please request a new one.',
+      );
+    }
+
+    final data = snap.data()!;
+    _validateOtp(data, code);
+
+    final targetEmail = (data['targetEmail'] as String?)?.trim();
+    if (targetEmail == null || targetEmail.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'missing-target-email',
+        message: 'Target email was not found in the verification request.',
+      );
+    }
+
+    // ignore: deprecated_member_use
+    await user.updateEmail(targetEmail);
+    await _usersCol.doc(user.uid).set(
+      {'email': targetEmail},
+      SetOptions(merge: true),
+    );
+    await docRef.delete();
   }
 
   /// Re-authenticates with current password and sends verification to [newEmail].
@@ -299,14 +490,54 @@ class AuthService {
     await user.verifyBeforeUpdateEmail(newEmail.trim());
   }
 
+  void _validateOtp(Map<String, dynamic> data, String inputCode) {
+    final savedCode = (data['code'] as String?) ?? '';
+    final expiresTs = data['expiresAt'];
+    final expiresAt = expiresTs is Timestamp ? expiresTs.toDate() : null;
+
+    if (expiresAt == null || expiresAt.isBefore(DateTime.now())) {
+      throw FirebaseAuthException(
+        code: 'code-expired',
+        message: 'Verification code has expired. Please request a new one.',
+      );
+    }
+
+    if (savedCode != inputCode.trim()) {
+      throw FirebaseAuthException(
+        code: 'invalid-code',
+        message: 'Verification code is invalid.',
+      );
+    }
+  }
+
+  String _generateCode() {
+    final value = _random.nextInt(1000000);
+    return value.toString().padLeft(6, '0');
+  }
+
+  Future<void> _sendOtpEmail({
+    required String to,
+    required String code,
+    required String actionLabel,
+  }) async {
+    await _mailCol.add({
+      'to': [to],
+      'message': {
+        'subject': 'UniTask verification code',
+        'text':
+            'Your UniTask 6-digit code for $actionLabel is: $code\n\nThis code will expire in 10 minutes. If you did not request this, please ignore this email.',
+      },
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // Delete account
   // ---------------------------------------------------------------------------
 
   /// Permanently deletes the user's account.
   ///
-  /// 1. Deletes the Firestore user document.
-  /// 2. Deletes the Firebase Auth account.
+  /// 1. Deletes the Firebase Auth account.
+  /// 2. Best-effort deletes the Firestore user document.
   ///
   /// **Note:** Firebase Auth may throw `requires-recent-login` if the user
   /// hasn't signed in recently. The caller should handle re-authentication.
@@ -314,11 +545,18 @@ class AuthService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    // Delete Firestore user doc first (auth deletion removes the token)
-    await _usersCol.doc(user.uid).delete();
+    final uid = user.uid;
 
-    // Delete the Firebase Auth account
+    // Delete auth account first so failures (e.g. requires-recent-login)
+    // do not leave the app in a half-deleted state.
     await user.delete();
+
+    // Best effort cleanup of Firestore profile document.
+    try {
+      await _usersCol.doc(uid).delete();
+    } catch (_) {
+      // Ignore cleanup failures here; account deletion already succeeded.
+    }
   }
 
   // ---------------------------------------------------------------------------

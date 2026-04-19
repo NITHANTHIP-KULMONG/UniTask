@@ -36,15 +36,18 @@ enum TaskStatus {
 
 /// Mirrors a `tasks/{id}` Firestore document.
 ///
-/// The [ownerId] field links the task to a user — security rules enforce
+/// The [ownerId] field links the task to a user - security rules enforce
 /// that only the owner (or an admin) can read / write each document.
 class Task {
   const Task({
     required this.id,
     required this.title,
-    required this.description,
-    required this.ownerId,
+    this.description = '',
+    required this.isCompleted,
+    required this.userId,
+    required this.subjectId,
     required this.status,
+    this.dueDateTime,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -52,57 +55,108 @@ class Task {
   final String id;
   final String title;
   final String description;
-  final String ownerId;
+  final bool isCompleted;
+  final String userId;
+  final String subjectId;
   final TaskStatus status;
+  final DateTime? dueDateTime;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   // ---------------------------------------------------------------------------
-  // Firestore serialisation
+  // Firestore serialization
   // ---------------------------------------------------------------------------
 
   factory Task.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data() ?? {};
-    final created =
-        (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+    return Task.fromJson(doc.data() ?? <String, dynamic>{}, id: doc.id);
+  }
+
+  factory Task.fromJson(Map<String, dynamic> json, {String? id}) {
+    final created = _toDateTime(json['createdAt']) ?? DateTime.now();
+    final status = TaskStatus.fromString(json['status'] as String?);
+    final completed =
+        (json['isCompleted'] as bool?) ?? status == TaskStatus.done;
+
     return Task(
-      id: doc.id,
-      title: data['title'] as String? ?? '',
-      description: data['description'] as String? ?? '',
-      ownerId: data['ownerId'] as String? ?? '',
-      status: TaskStatus.fromString(data['status'] as String?),
+      id: id ?? (json['id'] as String? ?? ''),
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      isCompleted: completed,
+      userId: json['ownerId'] as String? ?? '',
+      subjectId: json['subjectId'] as String? ?? '',
+      status: status,
+      dueDateTime: _normalizeDueDateTime(
+        _toDateTime(json['dueDateTime'] ?? json['dueDate']),
+      ),
       createdAt: created,
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? created,
+      updatedAt: _toDateTime(json['updatedAt']) ?? created,
     );
   }
 
-  /// For creating / updating a document. Does NOT include `id` — that's the
+  /// For creating / updating a document. Does NOT include `id` - that's the
   /// document key, not a field.
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toJson() {
+    final normalizedStatus = isCompleted ? TaskStatus.done : status;
     return {
       'title': title,
       'description': description,
-      'ownerId': ownerId,
-      'status': status.name,
+      'isCompleted': isCompleted,
+      'ownerId': userId,
+      'subjectId': subjectId,
+      'status': normalizedStatus.name,
+      'dueDateTime':
+          dueDateTime == null ? null : Timestamp.fromDate(dueDateTime!),
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
   }
 
-  /// Convenience copy method for status changes.
+  Map<String, dynamic> toFirestore() => toJson();
+
+  /// Convenience copy method for status and metadata changes.
   Task copyWith({
+    String? id,
     String? title,
     String? description,
+    bool? isCompleted,
+    String? userId,
+    String? subjectId,
     TaskStatus? status,
+    DateTime? dueDateTime,
+    bool clearDueDateTime = false,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return Task(
-      id: id,
+      id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
-      ownerId: ownerId,
+      isCompleted: isCompleted ?? this.isCompleted,
+      userId: userId ?? this.userId,
+      subjectId: subjectId ?? this.subjectId,
       status: status ?? this.status,
-      createdAt: createdAt,
-      updatedAt: DateTime.now(),
+      dueDateTime: clearDueDateTime ? null : (dueDateTime ?? this.dueDateTime),
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+
+  static DateTime? _normalizeDueDateTime(DateTime? value) {
+    if (value == null) return null;
+
+    final hasTime = value.hour != 0 ||
+        value.minute != 0 ||
+        value.second != 0 ||
+        value.millisecond != 0 ||
+        value.microsecond != 0;
+
+    if (hasTime) return value;
+    return DateTime(value.year, value.month, value.day, 18, 0);
+  }
+
+  static DateTime? _toDateTime(Object? value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    return null;
   }
 }

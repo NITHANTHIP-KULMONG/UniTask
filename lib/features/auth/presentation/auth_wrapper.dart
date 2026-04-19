@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/app_loading_screen.dart';
 import '../services/auth_service.dart';
 import '../../dashboard/presentation/home_shell.dart';
 import 'login_page.dart';
@@ -23,9 +24,7 @@ class AuthWrapper extends ConsumerWidget {
 
     return authState.when(
       // Still resolving the persisted login session.
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () => const AppLoadingScreen(message: 'Checking session...'),
       // Stream error (rare) — show message + retry.
       error: (e, _) => Scaffold(
         body: Center(child: Text('Auth error: $e')),

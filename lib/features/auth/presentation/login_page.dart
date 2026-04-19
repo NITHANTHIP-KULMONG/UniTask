@@ -2,20 +2,21 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/app_scaffold.dart';
-import '../../../shared/widgets/primary_button.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/custom_button.dart';
+import '../../../shared/widgets/custom_card.dart';
+import '../../../shared/widgets/custom_text_field.dart';
 import '../services/auth_service.dart';
+import 'auth_gate.dart';
 import 'register_page.dart';
 
-/// Email + password login page.
-///
-/// All Firebase logic is delegated to [AuthService] — this widget only handles
-/// UI state (loading flag, validation, error display).
-///
-/// On successful sign-in, [AuthGate] reacts to the `authStateChanges` stream
-/// and swaps this page for [HomeShell].  No manual navigation needed.
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({
+    super.key,
+    this.initialSnackBarMessage,
+  });
+
+  final String? initialSnackBarMessage;
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -25,8 +26,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+
   bool _isLoading = false;
   bool _isGoogleLoading = false;
+  bool _showForgotPasswordButton = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final message = widget.initialSnackBarMessage?.trim();
+    if (message == null || message.isEmpty) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    });
+  }
 
   @override
   void dispose() {
@@ -35,78 +52,160 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
-  // ---------------------------------------------------------------------------
-  // Google sign-in handler
-  // ---------------------------------------------------------------------------
+  Future<void> _handleSignIn() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+
+    try {
+      await ref.read(authServiceProvider).signIn(
+            email: _emailCtrl.text.trim(),
+            password: _passwordCtrl.text.trim(),
+          );
+
+      if (!mounted) return;
+      setState(() => _showForgotPasswordButton = false);
+      _goToAppRoot();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'wrong-password' ||
+          e.code == 'user-not-found' ||
+          e.code == 'invalid-credential') {
+        if (mounted) {
+          setState(() => _showForgotPasswordButton = true);
+          _showSnackBar('Email or password is incorrect.');
+        }
+      } else {
+        _showSnackBar(_mapLoginErrorCode(e.code));
+      }
+    } catch (_) {
+      _showSnackBar('An unexpected error occurred. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isGoogleLoading = true);
 
     try {
       await ref.read(authServiceProvider).signInWithGoogle();
-      // AuthGate handles navigation on success.
+      if (!mounted) return;
+      _goToAppRoot();
     } on FirebaseAuthException catch (e) {
-      _showError(_mapGoogleErrorCode(e.code));
+      _showSnackBar(_mapGoogleErrorCode(e.code));
     } catch (_) {
-      _showError('Google sign-in failed. Please try again.');
+      _showSnackBar('Google sign-in failed. Please try again.');
     } finally {
       if (mounted) setState(() => _isGoogleLoading = false);
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Email sign-in handler
-  // ---------------------------------------------------------------------------
+  Future<void> _openForgotPasswordDialog() async {
+    final emailCtrl = TextEditingController(text: _emailCtrl.text.trim());
+    final formKey = GlobalKey<FormState>();
 
-  Future<void> _handleSignIn() async {
-    // Validate the form (email format + password length).
-    if (!_formKey.currentState!.validate()) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        bool isSending = false;
 
-    setState(() => _isLoading = true);
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Forgot Password?'),
+              content: Form(
+                key: formKey,
+                child: TextFormField(
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    hintText: 'name@example.com',
+                    prefixIcon: Icon(Icons.alternate_email_rounded),
+                  ),
+                  validator: (value) {
+                    final email = value?.trim() ?? '';
+                    if (email.isEmpty) {
+                      return 'Email is required.';
+                    }
+                    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                        .hasMatch(email)) {
+                      return 'Enter a valid email address.';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      isSending ? null : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: isSending
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) return;
 
-    try {
-      // Delegate to AuthService — UI never touches FirebaseAuth directly.
-      await ref.read(authServiceProvider).signIn(
-            email: _emailCtrl.text.trim(),
-            password: _passwordCtrl.text.trim(),
-          );
-      // AuthGate handles navigation on success.
-    } on FirebaseAuthException catch (e) {
-      _showError(_mapErrorCode(e.code));
-    } catch (_) {
-      _showError('An unexpected error occurred. Please try again.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+                          setDialogState(() => isSending = true);
+                          final email = emailCtrl.text.trim();
+
+                          try {
+                            await FirebaseAuth.instance
+                                .sendPasswordResetEmail(email: email);
+
+                            if (dialogContext.mounted) {
+                              Navigator.of(dialogContext).pop();
+                            }
+
+                            if (mounted) {
+                              _showSnackBar('Reset link sent to your email');
+                            }
+                          } on FirebaseAuthException catch (e) {
+                            if (mounted) {
+                              _showSnackBar(_mapResetErrorCode(e.code));
+                            }
+                          } catch (_) {
+                            if (mounted) {
+                              _showSnackBar(
+                                'Unable to send reset email. Please try again.',
+                              );
+                            }
+                          } finally {
+                            if (dialogContext.mounted) {
+                              setDialogState(() => isSending = false);
+                            }
+                          }
+                        },
+                  child: isSending
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Submit'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    emailCtrl.dispose();
   }
 
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
-  void _showError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  /// Translates Firebase error codes into readable messages.
-  String _mapErrorCode(String code) {
+  String _mapLoginErrorCode(String code) {
     return switch (code) {
-      'user-not-found' => 'No account found with this email.',
-      'wrong-password' => 'Incorrect password. Please try again.',
       'invalid-email' => 'The email address is not valid.',
       'user-disabled' => 'This account has been disabled.',
-      'invalid-credential' =>
-        'Invalid credentials. Check your email and password.',
       'too-many-requests' =>
         'Too many attempts. Please wait a moment and try again.',
       _ => 'Login failed ($code). Please try again.',
     };
   }
 
-  /// Translates Google sign-in error codes into readable messages.
   String _mapGoogleErrorCode(String code) {
     return switch (code) {
       'popup-blocked' =>
@@ -120,132 +219,220 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     };
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
+  String _mapResetErrorCode(String code) {
+    return switch (code) {
+      'invalid-email' => 'Invalid email format.',
+      'user-not-found' => 'No user found for this email.',
+      'too-many-requests' => 'Too many requests. Please try again later.',
+      _ => 'Failed to send reset email ($code).',
+    };
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _goToAppRoot() {
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (_, animation, __) => FadeTransition(
+          opacity: animation,
+          child: const AuthGate(),
+        ),
+        transitionDuration: const Duration(milliseconds: 280),
+      ),
+      (_) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Login',
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // App title
-            Text(
-              'Welcome to UniTask',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Sign in to continue',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 32),
+    final tt = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
 
-            // Email field with validation
-            TextFormField(
-              controller: _emailCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                prefixIcon: Icon(Icons.email_outlined),
-              ),
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.email],
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Email is required.';
-                }
-                // Simple regex — Firebase does strict validation server-side.
-                if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                    .hasMatch(value.trim())) {
-                  return 'Enter a valid email address.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Password field with validation
-            TextFormField(
-              controller: _passwordCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                prefixIcon: Icon(Icons.lock_outlined),
-              ),
-              obscureText: true,
-              textInputAction: TextInputAction.done,
-              autofillHints: const [AutofillHints.password],
-              onFieldSubmitted: (_) => _handleSignIn(),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Password is required.';
-                }
-                if (value.trim().length < 6) {
-                  return 'Password must be at least 6 characters.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Login button
-            PrimaryButton(
-              label: 'Login',
-              isLoading: _isLoading,
-              onPressed: _handleSignIn,
-            ),
-            const SizedBox(height: 20),
-
-            // Divider between email and social sign-in
-            Row(
-              children: [
-                const Expanded(child: Divider()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'OR',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+    return Scaffold(
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              cs.primary.withValues(alpha: 0.08),
+              Theme.of(context).scaffoldBackgroundColor,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 320),
+                  tween: Tween<double>(begin: 0, end: 1),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, child) {
+                    return Opacity(
+                      opacity: value,
+                      child: Transform.translate(
+                        offset: Offset(0, (1 - value) * 12),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: CustomCard(
+                    padding: const EdgeInsets.all(24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                gradient: AppTheme.primaryGradient,
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.primary.withValues(alpha: 0.26),
+                                    blurRadius: 18,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.task_alt_rounded,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                            'Welcome back',
+                            textAlign: TextAlign.center,
+                            style: tt.headlineSmall,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Sign in to continue organizing your work.',
+                            textAlign: TextAlign.center,
+                            style: tt.bodyMedium,
+                          ),
+                          const SizedBox(height: 24),
+                          CustomTextField(
+                            controller: _emailCtrl,
+                            label: 'Email',
+                            hintText: 'name@university.edu',
+                            prefixIcon: const Icon(Icons.alternate_email_rounded),
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            autofillHints: const [AutofillHints.email],
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Email is required.';
+                              }
+                              if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                                  .hasMatch(value.trim())) {
+                                return 'Enter a valid email address.';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          CustomTextField(
+                            controller: _passwordCtrl,
+                            label: 'Password',
+                            hintText: 'Enter your password',
+                            prefixIcon: const Icon(Icons.lock_outline_rounded),
+                            obscureText: true,
+                            textInputAction: TextInputAction.done,
+                            autofillHints: const [AutofillHints.password],
+                            onFieldSubmitted: (_) => _handleSignIn(),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Password is required.';
+                              }
+                              if (value.trim().length < 6) {
+                                return 'Password must be at least 6 characters.';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          CustomButton(
+                            label: 'Login',
+                            onPressed: _handleSignIn,
+                            isLoading: _isLoading,
+                            icon: Icons.login_rounded,
+                          ),
+                          if (_showForgotPasswordButton) ...[
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: _openForgotPasswordDialog,
+                                child: const Text('Forgot Password?'),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Divider(color: cs.outlineVariant),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  'OR',
+                                  style: tt.bodySmall,
+                                ),
+                              ),
+                              Expanded(
+                                child: Divider(color: cs.outlineVariant),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            onPressed: _isGoogleLoading ? null : _handleGoogleSignIn,
+                            icon: _isGoogleLoading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.g_mobiledata_rounded, size: 22),
+                            label: const Text('Continue with Google'),
+                          ),
+                          const SizedBox(height: 10),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterPage(),
+                                ),
+                              );
+                            },
+                            child: const Text("Don't have an account? Register"),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                const Expanded(child: Divider()),
-              ],
+              ),
             ),
-            const SizedBox(height: 20),
-
-            // Google sign-in button
-            OutlinedButton.icon(
-              onPressed: _isGoogleLoading ? null : _handleGoogleSignIn,
-              icon: _isGoogleLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.g_mobiledata, size: 24),
-              label: const Text('Continue with Google'),
-            ),
-            const SizedBox(height: 16),
-
-            // Navigate to register
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RegisterPage()),
-                );
-              },
-              child: const Text("Don't have an account? Register"),
-            ),
-          ],
+          ),
         ),
       ),
     );

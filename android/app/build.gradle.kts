@@ -5,7 +5,7 @@ plugins {
     id("com.google.gms.google-services")
 }
 
-distributionUrl=https\://services.gradle.org/distributions/gradle-8.14-bin.zip
+
 
 // ...existing code...
 android {
@@ -46,6 +46,4 @@ flutter {
     source = "../.."
 }
 
-rmdir /s /q "C:\Users\Lenovo\AppData\Roaming\Code\User\globalStorage\redhat.java"
 
-gradle clean build

@@ -145,19 +145,18 @@ class _UserTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isAdmin = user.isAdmin;
+    final photoUrl = _normalizePhotoUrl(user.photoUrl);
+    final fallbackInitial = user.name.isNotEmpty
+        ? user.name[0].toUpperCase()
+        : user.email.isNotEmpty
+            ? user.email[0].toUpperCase()
+            : '?';
 
     return Card(
       child: ListTile(
         leading: CircleAvatar(
-          backgroundImage:
-              user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
-          child: user.photoUrl == null
-              ? Text(user.name.isNotEmpty
-                  ? user.name[0].toUpperCase()
-                  : user.email.isNotEmpty
-                      ? user.email[0].toUpperCase()
-                      : '?')
-              : null,
+          foregroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+          child: Text(fallbackInitial),
         ),
         title: Text(user.name.isNotEmpty ? user.name : user.email),
         subtitle: Text(user.email),
@@ -177,6 +176,12 @@ class _UserTile extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _normalizePhotoUrl(String? value) {
+  final trimmed = value?.trim();
+  if (trimmed == null || trimmed.isEmpty) return null;
+  return trimmed;
 }
 
 // =============================================================================
@@ -241,7 +246,7 @@ class _AdminTaskTile extends StatelessWidget {
               : null,
         ),
         subtitle: Text(
-          'Owner: ${task.ownerId.substring(0, 8)}…',
+          'Owner: ${task.userId.substring(0, 8)}…',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         trailing: Chip(
