@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../auth/services/auth_service.dart';
 import '../../tasks/models/task.dart';
 import '../../tasks/services/task_service.dart';
@@ -38,16 +39,17 @@ class _SubjectsScreenState extends ConsumerState<SubjectsScreen> {
   Widget build(BuildContext context) {
     final subjectsAsync = ref.watch(userSubjectsProvider);
     final tasks = ref.watch(userTasksProvider).valueOrNull ?? const [];
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Subjects'),
+        title: Text(l10n.navSubjects),
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'subjectsFab',
         onPressed: () => _openAddDialog(context, ref),
         icon: const Icon(Icons.add),
-        label: const Text('New Subject'),
+        label: Text(l10n.subjectsNewSubject),
       ),
       body: subjectsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -59,13 +61,13 @@ class _SubjectsScreenState extends ConsumerState<SubjectsScreen> {
               children: [
                 const Icon(Icons.error_outline, size: 48, color: Colors.red),
                 const SizedBox(height: 12),
-                Text('Failed to load subjects.\n$e',
+                Text(l10n.subjectsLoadFailed('$e'),
                     textAlign: TextAlign.center),
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: () => ref.invalidate(userSubjectsProvider),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
+                  label: Text(l10n.commonRetry),
                 ),
               ],
             ),
@@ -96,7 +98,7 @@ class _SubjectsScreenState extends ConsumerState<SubjectsScreen> {
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Search subjects',
+                    hintText: l10n.subjectsSearchHint,
                     prefixIcon: const Icon(Icons.search),
                     filled: true,
                     border: OutlineInputBorder(
@@ -108,17 +110,16 @@ class _SubjectsScreenState extends ConsumerState<SubjectsScreen> {
               ),
               Expanded(
                 child: subjects.isEmpty
-                    ? const _SubjectsEmptyState(
+                    ? _SubjectsEmptyState(
                         icon: Icons.menu_book_outlined,
-                        title: 'No subjects yet',
-                        message: 'Tap the + button to add your first subject.',
+                        title: l10n.subjectsEmptyTitle,
+                        message: l10n.subjectsEmptyMessage,
                       )
                     : filtered.isEmpty
-                        ? const _SubjectsEmptyState(
+                        ? _SubjectsEmptyState(
                             icon: Icons.search_off,
-                            title: 'No matching subjects',
-                            message:
-                                'Try a different keyword to find your subject.',
+                            title: l10n.subjectsNoMatchTitle,
+                            message: l10n.subjectsNoMatchMessage,
                           )
                         : ListView.separated(
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
@@ -130,65 +131,72 @@ class _SubjectsScreenState extends ConsumerState<SubjectsScreen> {
                               final count =
                                   activeTaskCountBySubject[subject.id] ?? 0;
                               final countText =
-                                  '$count assignment${count == 1 ? '' : 's'}';
+                                  l10n.subjectsAssignmentCount(count);
 
-                              return Card(
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 6,
-                                  ),
-                                  leading: Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: subject.color.color,
+                              return Hero(
+                                tag: 'subject-${subject.id}',
+                                child: Card(
+                                  clipBehavior: Clip.antiAlias,
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 6,
                                     ),
-                                  ),
-                                  title: Text(
-                                    subject.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                  ),
-                                  subtitle: Text(
-                                    countText,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurfaceVariant,
-                                        ),
-                                  ),
-                                  onTap: () =>
-                                      _openEditDialog(context, ref, subject),
-                                  trailing: PopupMenuButton<_SubjectAction>(
-                                    tooltip: 'More',
-                                    onSelected: (action) {
-                                      if (action == _SubjectAction.edit) {
-                                        _openEditDialog(context, ref, subject);
-                                        return;
-                                      }
-                                      _confirmDelete(context, ref, subject);
-                                    },
-                                    itemBuilder: (_) => const [
-                                      PopupMenuItem(
-                                        value: _SubjectAction.edit,
-                                        child: Text('Edit'),
+                                    leading: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      width: 12,
+                                      height: 12,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: subject.color.color,
                                       ),
-                                      PopupMenuItem(
-                                        value: _SubjectAction.delete,
-                                        child: Text('Delete'),
-                                      ),
-                                    ],
+                                    ),
+                                    title: Text(
+                                      subject.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                    subtitle: Text(
+                                      countText,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                    onTap: () =>
+                                        _openEditDialog(context, ref, subject),
+                                    trailing: PopupMenuButton<_SubjectAction>(
+                                      tooltip: l10n.commonMore,
+                                      onSelected: (action) {
+                                        if (action == _SubjectAction.edit) {
+                                          _openEditDialog(
+                                              context, ref, subject);
+                                          return;
+                                        }
+                                        _confirmDelete(context, ref, subject);
+                                      },
+                                      itemBuilder: (_) => [
+                                        PopupMenuItem(
+                                          value: _SubjectAction.edit,
+                                          child: Text(l10n.taskActionEdit),
+                                        ),
+                                        PopupMenuItem(
+                                          value: _SubjectAction.delete,
+                                          child: Text(l10n.commonDelete),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
@@ -207,11 +215,14 @@ class _SubjectsScreenState extends ConsumerState<SubjectsScreen> {
   // ---------------------------------------------------------------------------
 
   Future<void> _openAddDialog(BuildContext context, WidgetRef ref) async {
-    final result = await showDialog<_SubjectDialogResult>(
+    final l10n = context.l10n;
+    final result = await showModalBottomSheet<_SubjectDialogResult>(
       context: context,
-      builder: (_) => const _SubjectFormDialog(
-        dialogTitle: 'Add Subject',
-        confirmLabel: 'Add',
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _SubjectFormSheet(
+        sheetTitle: l10n.subjectsAddTitle,
+        confirmLabel: l10n.commonAdd,
       ),
     );
 
@@ -228,13 +239,13 @@ class _SubjectsScreenState extends ConsumerState<SubjectsScreen> {
           );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('"${result.name}" created')),
+          SnackBar(content: Text(l10n.subjectsCreated(result.name))),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create subject: $e')),
+          SnackBar(content: Text(l10n.subjectsCreateFailed('$e'))),
         );
       }
     }
@@ -245,13 +256,17 @@ class _SubjectsScreenState extends ConsumerState<SubjectsScreen> {
     WidgetRef ref,
     Subject subject,
   ) async {
-    final result = await showDialog<_SubjectDialogResult>(
+    final l10n = context.l10n;
+    final result = await showModalBottomSheet<_SubjectDialogResult>(
       context: context,
-      builder: (_) => _SubjectFormDialog(
-        dialogTitle: 'Edit Subject',
-        confirmLabel: 'Save',
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _SubjectFormSheet(
+        sheetTitle: l10n.subjectsEditTitle,
+        confirmLabel: l10n.commonSave,
         initialName: subject.name,
         initialColor: subject.color,
+        subjectId: subject.id,
       ),
     );
 
@@ -264,13 +279,13 @@ class _SubjectsScreenState extends ConsumerState<SubjectsScreen> {
           );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('"${result.name}" updated')),
+          SnackBar(content: Text(l10n.subjectsUpdated(result.name))),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update subject: $e')),
+          SnackBar(content: Text(l10n.subjectsUpdateFailed('$e'))),
         );
       }
     }
@@ -281,19 +296,20 @@ class _SubjectsScreenState extends ConsumerState<SubjectsScreen> {
     WidgetRef ref,
     Subject subject,
   ) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Subject'),
-        content: Text('Delete "${subject.name}"? This cannot be undone.'),
+        title: Text(l10n.subjectsDeleteTitle),
+        content: Text(l10n.subjectsDeleteMessage(subject.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -304,13 +320,13 @@ class _SubjectsScreenState extends ConsumerState<SubjectsScreen> {
       await ref.read(subjectControllerProvider).deleteById(subject.id);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('"${subject.name}" deleted')),
+          SnackBar(content: Text(l10n.subjectsDeleted(subject.name))),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete subject: $e')),
+          SnackBar(content: Text(l10n.subjectsDeleteFailed('$e'))),
         );
       }
     }
@@ -370,24 +386,26 @@ class _SubjectDialogResult {
 // Subject form dialog (name + colour picker)
 // =============================================================================
 
-class _SubjectFormDialog extends StatefulWidget {
-  const _SubjectFormDialog({
-    required this.dialogTitle,
+class _SubjectFormSheet extends StatefulWidget {
+  const _SubjectFormSheet({
+    required this.sheetTitle,
     required this.confirmLabel,
     this.initialName = '',
     this.initialColor = SubjectColor.indigo,
+    this.subjectId,
   });
 
-  final String dialogTitle;
+  final String sheetTitle;
   final String confirmLabel;
   final String initialName;
   final SubjectColor initialColor;
+  final String? subjectId;
 
   @override
-  State<_SubjectFormDialog> createState() => _SubjectFormDialogState();
+  State<_SubjectFormSheet> createState() => _SubjectFormSheetState();
 }
 
-class _SubjectFormDialogState extends State<_SubjectFormDialog> {
+class _SubjectFormSheetState extends State<_SubjectFormSheet> {
   late final TextEditingController _nameCtrl;
   late SubjectColor _selectedColor;
 
@@ -412,21 +430,41 @@ class _SubjectFormDialogState extends State<_SubjectFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.dialogTitle),
-      content: Column(
+    final l10n = context.l10n;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 24,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+      ),
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                widget.sheetTitle,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           TextField(
             controller: _nameCtrl,
             autofocus: true,
             textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(labelText: 'Subject name'),
+            decoration: InputDecoration(labelText: l10n.subjectsNameLabel),
             onSubmitted: (_) => _submit(),
           ),
           const SizedBox(height: 20),
-          Text('Colour',
+          Text(l10n.subjectsColorLabel,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   )),
@@ -458,18 +496,16 @@ class _SubjectFormDialogState extends State<_SubjectFormDialog> {
               );
             }).toList(),
           ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _submit,
+              child: Text(widget.confirmLabel),
+            ),
+          ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(widget.confirmLabel),
-        ),
-      ],
     );
   }
 }

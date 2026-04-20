@@ -4,6 +4,8 @@ import 'dart:ui'; // Needed for ImageFilter
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/l10n/l10n.dart';
+
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
 
@@ -73,20 +75,20 @@ class _LandingPageState extends State<LandingPage> {
   }
 
   Widget _buildTopNav(TextTheme tt) {
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B).withOpacity(0.5),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF334155).withOpacity(0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          )
-        ]
-      ),
+          color: const Color(0xFF1E293B).withOpacity(0.5),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFF334155).withOpacity(0.5)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            )
+          ]),
       child: Row(
         children: [
           Container(
@@ -137,9 +139,10 @@ class _LandingPageState extends State<LandingPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Open App', style: tt.titleSmall),
+                  Text(l10n.landingOpenApp, style: tt.titleSmall),
                   const SizedBox(width: 8),
-                  const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                  const Icon(Icons.arrow_forward_rounded,
+                      color: Colors.white, size: 18),
                 ],
               ),
             ),
@@ -150,6 +153,7 @@ class _LandingPageState extends State<LandingPage> {
   }
 
   Widget _buildHero(TextTheme tt, bool compact) {
+    final l10n = context.l10n;
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -163,10 +167,11 @@ class _LandingPageState extends State<LandingPage> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.stars_rounded, color: Color(0xFF14B8A6), size: 18),
+              const Icon(Icons.stars_rounded,
+                  color: Color(0xFF14B8A6), size: 18),
               const SizedBox(width: 8),
               Text(
-                'Next-Gen Productivity',
+                l10n.landingBadgeNextGen,
                 style: tt.bodyMedium?.copyWith(
                   color: const Color(0xFF14B8A6),
                   fontWeight: FontWeight.w600,
@@ -177,14 +182,14 @@ class _LandingPageState extends State<LandingPage> {
         ),
         const SizedBox(height: 24),
         Text(
-          'Manage your tasks\nsmarter and faster.',
+          l10n.landingHeroTitle,
           style: tt.headlineLarge?.copyWith(fontSize: compact ? 48 : 64),
         ),
         const SizedBox(height: 20),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 580),
           child: Text(
-            'Organize assignments, track progress, and stay on schedule with a beautiful SaaS workflow.',
+            l10n.landingHeroSubtitle,
             style: tt.bodyLarge,
           ),
         ),
@@ -197,7 +202,8 @@ class _LandingPageState extends State<LandingPage> {
               onPressed: _openApp,
               scaleAmount: 0.96,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF3B82F6), Color(0xFF14B8A6)],
@@ -214,9 +220,10 @@ class _LandingPageState extends State<LandingPage> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Start Now', style: tt.titleMedium),
+                    Text(l10n.landingStartNow, style: tt.titleMedium),
                     const SizedBox(width: 8),
-                    const Icon(Icons.rocket_launch_rounded, color: Colors.white),
+                    const Icon(Icons.rocket_launch_rounded,
+                        color: Colors.white),
                   ],
                 ),
               ),
@@ -225,18 +232,21 @@ class _LandingPageState extends State<LandingPage> {
               onPressed: _scrollToFeatures,
               scaleAmount: 0.96,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
                 decoration: BoxDecoration(
                   color: Colors.transparent,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF334155), width: 1.5),
+                  border:
+                      Border.all(color: const Color(0xFF334155), width: 1.5),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Learn More', style: tt.titleMedium),
+                    Text(l10n.landingLearnMore, style: tt.titleMedium),
                     const SizedBox(width: 8),
-                    const Icon(Icons.arrow_downward_rounded, color: Colors.white),
+                    const Icon(Icons.arrow_downward_rounded,
+                        color: Colors.white),
                   ],
                 ),
               ),
@@ -286,21 +296,39 @@ class _LandingPageState extends State<LandingPage> {
     bool center = false,
   }) {
     return Column(
-      crossAxisAlignment: center ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      crossAxisAlignment:
+          center ? CrossAxisAlignment.center : CrossAxisAlignment.start,
       children: [
-        Text(title, style: tt.headlineMedium?.copyWith(fontSize: 40), textAlign: center ? TextAlign.center : TextAlign.start),
+        Text(title,
+            style: tt.headlineMedium?.copyWith(fontSize: 40),
+            textAlign: center ? TextAlign.center : TextAlign.start),
         const SizedBox(height: 12),
-        Text(subtitle, style: tt.bodyLarge, textAlign: center ? TextAlign.center : TextAlign.start),
+        Text(subtitle,
+            style: tt.bodyLarge,
+            textAlign: center ? TextAlign.center : TextAlign.start),
       ],
     );
   }
 
   Widget _buildFeatures(TextTheme tt) {
-    const features = [
-      _FeatureItem(icon: Icons.task_alt_rounded, title: 'Task Management', description: 'Create and organize assignments efficiently.'),
-      _FeatureItem(icon: Icons.sync_rounded, title: 'Real-time Sync', description: 'Instant updates across all your devices.'),
-      _FeatureItem(icon: Icons.notifications_active_rounded, title: 'Smart Reminders', description: 'Never miss a deadline with intelligent alerts.'),
-      _FeatureItem(icon: Icons.auto_awesome_rounded, title: 'Premium UI', description: 'Focus better with a clean, modern interface.'),
+    final l10n = context.l10n;
+    final features = [
+      _FeatureItem(
+          icon: Icons.task_alt_rounded,
+        title: l10n.landingFeatureTaskManagementTitle,
+        description: l10n.landingFeatureTaskManagementDescription),
+      _FeatureItem(
+          icon: Icons.sync_rounded,
+        title: l10n.landingFeatureRealtimeSyncTitle,
+        description: l10n.landingFeatureRealtimeSyncDescription),
+      _FeatureItem(
+          icon: Icons.notifications_active_rounded,
+        title: l10n.landingFeatureSmartRemindersTitle,
+        description: l10n.landingFeatureSmartRemindersDescription),
+      _FeatureItem(
+          icon: Icons.auto_awesome_rounded,
+        title: l10n.landingFeaturePremiumUiTitle,
+        description: l10n.landingFeaturePremiumUiDescription),
     ];
 
     return Container(
@@ -309,8 +337,8 @@ class _LandingPageState extends State<LandingPage> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _buildSectionHeader(
-            title: 'Everything you need',
-            subtitle: 'Powerful features designed for maximum productivity.',
+            title: l10n.landingFeaturesTitle,
+            subtitle: l10n.landingFeaturesSubtitle,
             tt: tt,
             center: true,
           ),
@@ -318,7 +346,11 @@ class _LandingPageState extends State<LandingPage> {
           LayoutBuilder(
             builder: (context, constraints) {
               final width = constraints.maxWidth;
-              final cardWidth = width >= 1080 ? (width - 48) / 4 : width >= 760 ? (width - 16) / 2 : width;
+              final cardWidth = width >= 1080
+                  ? (width - 48) / 4
+                  : width >= 760
+                      ? (width - 16) / 2
+                      : width;
 
               return Wrap(
                 spacing: 16,
@@ -340,12 +372,13 @@ class _LandingPageState extends State<LandingPage> {
   }
 
   Widget _buildShowcase(TextTheme tt) {
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _buildSectionHeader(
-          title: 'Beautiful inside out',
-          subtitle: 'Experience an app that feels as good as it looks.',
+          title: l10n.landingShowcaseTitle,
+          subtitle: l10n.landingShowcaseSubtitle,
           tt: tt,
           center: true,
         ),
@@ -355,9 +388,15 @@ class _LandingPageState extends State<LandingPage> {
           child: PageView(
             controller: PageController(viewportFraction: 0.8),
             children: [
-              _HoverCard(scaleAmount: 0.98, child: const _PhoneMock(title: 'Dashboard Overview')),
-              _HoverCard(scaleAmount: 0.98, child: const _PhoneMock(title: 'Assignment Board')),
-              _HoverCard(scaleAmount: 0.98, child: const _PhoneMock(title: 'Focus Mode')),
+              _HoverCard(
+                  scaleAmount: 0.98,
+                  child: _PhoneMock(title: l10n.landingShowcaseScreenDashboard)),
+              _HoverCard(
+                  scaleAmount: 0.98,
+                  child: _PhoneMock(title: l10n.landingShowcaseScreenAssignments)),
+              _HoverCard(
+                  scaleAmount: 0.98,
+                  child: _PhoneMock(title: l10n.landingShowcaseScreenFocus)),
             ],
           ),
         ),
@@ -366,18 +405,25 @@ class _LandingPageState extends State<LandingPage> {
   }
 
   Widget _buildFaq(TextTheme tt) {
-    const faqs = [
-      _FaqItem(question: 'Is this app free?', answer: 'Yes. UniTask core features are free to use.'),
-      _FaqItem(question: 'Does it sync across devices?', answer: 'Yes. Data synchronizes in real-time across all devices.'),
-      _FaqItem(question: 'Can I use it offline?', answer: 'Yes. You can work offline and sync automatically when online.'),
+    final l10n = context.l10n;
+    final faqs = [
+      _FaqItem(
+        question: l10n.landingFaqQuestionFree,
+        answer: l10n.landingFaqAnswerFree),
+      _FaqItem(
+        question: l10n.landingFaqQuestionSync,
+        answer: l10n.landingFaqAnswerSync),
+      _FaqItem(
+        question: l10n.landingFaqQuestionOffline,
+        answer: l10n.landingFaqAnswerOffline),
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _buildSectionHeader(
-          title: 'Common Questions',
-          subtitle: 'Everything you need to know about UniTask.',
+            title: l10n.landingFaqTitle,
+            subtitle: l10n.landingFaqSubtitle,
           tt: tt,
           center: true,
         ),
@@ -399,13 +445,17 @@ class _LandingPageState extends State<LandingPage> {
                   return Column(
                     children: [
                       Theme(
-                        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                        data: Theme.of(context)
+                            .copyWith(dividerColor: Colors.transparent),
                         child: ExpansionTile(
                           iconColor: const Color(0xFF3B82F6),
                           collapsedIconColor: const Color(0xFF94A3B8),
-                          title: Text(item.question, style: tt.titleMedium?.copyWith(fontSize: 18)),
-                          childrenPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-                          tilePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                          title: Text(item.question,
+                              style: tt.titleMedium?.copyWith(fontSize: 18)),
+                          childrenPadding:
+                              const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                          tilePadding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 8),
                           children: [
                             Align(
                               alignment: Alignment.centerLeft,
@@ -415,7 +465,9 @@ class _LandingPageState extends State<LandingPage> {
                         ),
                       ),
                       if (index != faqs.length - 1)
-                        Divider(height: 1, color: const Color(0xFF334155).withOpacity(0.5)),
+                        Divider(
+                            height: 1,
+                            color: const Color(0xFF334155).withOpacity(0.5)),
                     ],
                   );
                 }).toList(),
@@ -428,35 +480,35 @@ class _LandingPageState extends State<LandingPage> {
   }
 
   Widget _buildBottomCTA(TextTheme tt) {
+    final l10n = context.l10n;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-        ),
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: const Color(0xFF334155)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF3B82F6).withOpacity(0.1),
-            blurRadius: 40,
-            spreadRadius: -10,
-          )
-        ]
-      ),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+          ),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: const Color(0xFF334155)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF3B82F6).withOpacity(0.1),
+              blurRadius: 40,
+              spreadRadius: -10,
+            )
+          ]),
       child: Column(
         children: [
           Text(
-            'Ready to boost your productivity?',
+            l10n.landingBottomTitle,
             style: tt.headlineMedium?.copyWith(fontSize: 40),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
-            'Join thousands of users organizing their tasks efficiently.',
+            l10n.landingBottomSubtitle,
             style: tt.bodyLarge,
             textAlign: TextAlign.center,
           ),
@@ -481,9 +533,11 @@ class _LandingPageState extends State<LandingPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Start Now', style: tt.titleMedium?.copyWith(fontSize: 20)),
+                  Text(l10n.landingStartNow,
+                      style: tt.titleMedium?.copyWith(fontSize: 20)),
                   const SizedBox(width: 12),
-                  const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 22),
+                  const Icon(Icons.arrow_forward_rounded,
+                      color: Colors.white, size: 22),
                 ],
               ),
             ),
@@ -536,7 +590,7 @@ class _LandingPageState extends State<LandingPage> {
               ),
             ),
           ),
-          
+
           SafeArea(
             child: SingleChildScrollView(
               controller: _scrollController,
@@ -550,7 +604,8 @@ class _LandingPageState extends State<LandingPage> {
                     children: [
                       _FadeInSection(delayMs: 0, child: _buildTopNav(tt)),
                       const SizedBox(height: 64),
-                      _FadeInSection(delayMs: 100, child: _buildHero(tt, compact)),
+                      _FadeInSection(
+                          delayMs: 100, child: _buildHero(tt, compact)),
                       const SizedBox(height: 120),
                       _FadeInSection(delayMs: 200, child: _buildFeatures(tt)),
                       const SizedBox(height: 120),
@@ -575,7 +630,8 @@ class _LandingPageState extends State<LandingPage> {
 // ANIMATION HELPERS
 
 class _HoverButton extends StatefulWidget {
-  const _HoverButton({required this.child, required this.onPressed, this.scaleAmount = 0.97});
+  const _HoverButton(
+      {required this.child, required this.onPressed, this.scaleAmount = 0.97});
   final Widget child;
   final VoidCallback onPressed;
   final double scaleAmount;
@@ -641,7 +697,8 @@ class _FloatingAnimation extends StatefulWidget {
   State<_FloatingAnimation> createState() => _FloatingAnimationState();
 }
 
-class _FloatingAnimationState extends State<_FloatingAnimation> with SingleTickerProviderStateMixin {
+class _FloatingAnimationState extends State<_FloatingAnimation>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 4),
@@ -710,7 +767,8 @@ class _FadeInSectionState extends State<_FadeInSection> {
 // DATA CLASSES & UI COMPONENTS
 
 class _FeatureItem {
-  const _FeatureItem({required this.icon, required this.title, required this.description});
+  const _FeatureItem(
+      {required this.icon, required this.title, required this.description});
   final IconData icon;
   final String title;
   final String description;
@@ -758,13 +816,16 @@ class _FaqItem {
 }
 
 class _PhoneMock extends StatelessWidget {
-  const _PhoneMock({this.textTheme, this.title = 'Today'});
+  const _PhoneMock({this.textTheme, this.title = ''});
   final TextTheme? textTheme;
   final String title;
 
   @override
   Widget build(BuildContext context) {
-    final tt = textTheme ?? GoogleFonts.plusJakartaSansTextTheme(Theme.of(context).textTheme);
+    final l10n = context.l10n;
+    final tt = textTheme ??
+        GoogleFonts.plusJakartaSansTextTheme(Theme.of(context).textTheme);
+    final resolvedTitle = title.isNotEmpty ? title : l10n.landingPhoneTitleToday;
 
     Widget buildTaskItem(String taskTitle, String time, Color dotColor) {
       return Container(
@@ -777,10 +838,18 @@ class _PhoneMock extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(width: 12, height: 12, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
+            Container(
+                width: 12,
+                height: 12,
+                decoration:
+                    BoxDecoration(color: dotColor, shape: BoxShape.circle)),
             const SizedBox(width: 14),
-            Expanded(child: Text(taskTitle, style: tt.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w600))),
-            Text(time, style: tt.bodySmall?.copyWith(color: const Color(0xFF94A3B8))),
+            Expanded(
+                child: Text(taskTitle,
+                    style: tt.bodyMedium?.copyWith(
+                        color: Colors.white, fontWeight: FontWeight.w600))),
+            Text(time,
+                style: tt.bodySmall?.copyWith(color: const Color(0xFF94A3B8))),
           ],
         ),
       );
@@ -794,32 +863,59 @@ class _PhoneMock extends StatelessWidget {
         borderRadius: BorderRadius.circular(40),
         border: Border.all(color: const Color(0xFF334155), width: 2),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 40, offset: const Offset(0, 20)),
+          BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 40,
+              offset: const Offset(0, 20)),
         ],
       ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(28)),
+        decoration: BoxDecoration(
+            color: const Color(0xFF0F172A),
+            borderRadius: BorderRadius.circular(28)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Center(child: Container(width: 60, height: 6, margin: const EdgeInsets.only(bottom: 24), decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: const Color(0xFF334155)))),
-            Text(title, style: tt.titleMedium?.copyWith(fontSize: 24)),
+            Center(
+                child: Container(
+                    width: 60,
+                    height: 6,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: const Color(0xFF334155)))),
+            Text(resolvedTitle, style: tt.titleMedium?.copyWith(fontSize: 24)),
             const SizedBox(height: 24),
-            buildTaskItem('Design Review', '10:00', const Color(0xFF14B8A6)),
-            buildTaskItem('Development', '13:00', const Color(0xFF3B82F6)),
-            buildTaskItem('Sync Team', '16:30', const Color(0xFF8B5CF6)),
+            buildTaskItem(
+              l10n.landingPhoneTaskDesignReview,
+              '10:00',
+              const Color(0xFF14B8A6),
+            ),
+            buildTaskItem(
+              l10n.landingPhoneTaskDevelopment,
+              '13:00',
+              const Color(0xFF3B82F6),
+            ),
+            buildTaskItem(
+              l10n.landingPhoneTaskSyncTeam,
+              '16:30',
+              const Color(0xFF8B5CF6),
+            ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF14B8A6)]), borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                      colors: [Color(0xFF3B82F6), Color(0xFF14B8A6)]),
+                  borderRadius: BorderRadius.circular(16)),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.add_rounded, color: Colors.white),
                   const SizedBox(width: 8),
-                  Text('New Task', style: tt.titleSmall),
+                  Text(l10n.landingPhoneNewTask, style: tt.titleSmall),
                 ],
               ),
             ),

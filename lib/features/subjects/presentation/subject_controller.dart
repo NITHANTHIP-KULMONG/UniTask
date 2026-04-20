@@ -12,8 +12,7 @@ export '../services/subject_service.dart'
 ///
 /// The real-time list comes from [userSubjectsProvider] (a StreamProvider
 /// backed by Firestore).  This controller only handles mutations.
-final subjectControllerProvider =
-    Provider<SubjectController>((ref) {
+final subjectControllerProvider = Provider<SubjectController>((ref) {
   return SubjectController(ref.read(subjectServiceProvider));
 });
 

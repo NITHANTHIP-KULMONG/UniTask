@@ -29,6 +29,11 @@ class UserHomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(selectedTabIndexProvider);
     final l10n = context.l10n;
+    final activeColor = Theme.of(context).colorScheme.primary;
+    final inactiveColor = Theme.of(context).brightness == Brightness.dark
+      ? Colors.white70
+      : Colors.black54;
+
     void goToTasks() => ref.read(selectedTabIndexProvider.notifier).state = 1;
 
     final pages = <Widget>[
@@ -53,57 +58,57 @@ class UserHomePage extends ConsumerWidget {
             NavigationDestination(
               icon: Icon(
                 Icons.dashboard_outlined,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: inactiveColor,
               ),
               selectedIcon: Icon(
                 Icons.dashboard,
-                color: Theme.of(context).colorScheme.primary,
+                color: activeColor,
               ),
               label: l10n.navDashboard,
             ),
             NavigationDestination(
               icon: Icon(
                 Icons.task_alt_outlined,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: inactiveColor,
               ),
               selectedIcon: Icon(
                 Icons.task_alt,
-                color: Theme.of(context).colorScheme.primary,
+                color: activeColor,
               ),
               label: l10n.navTasks,
             ),
             NavigationDestination(
               icon: Icon(
                 Icons.timer_outlined,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: inactiveColor,
               ),
               selectedIcon: Icon(
                 Icons.timer,
-                color: Theme.of(context).colorScheme.primary,
+                color: activeColor,
               ),
               label: l10n.navTimer,
             ),
             NavigationDestination(
               icon: Icon(
                 Icons.menu_book_outlined,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: inactiveColor,
               ),
               selectedIcon: Icon(
                 Icons.menu_book,
-                color: Theme.of(context).colorScheme.primary,
+                color: activeColor,
               ),
               label: l10n.navSubjects,
             ),
             NavigationDestination(
               icon: Icon(
                 Icons.person_outline,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: inactiveColor,
               ),
               selectedIcon: Icon(
                 Icons.person,
-                color: Theme.of(context).colorScheme.primary,
+                color: activeColor,
               ),
-              label: 'Profile',
+              label: l10n.profileTitle,
             ),
           ],
         ),

@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_card.dart';
@@ -52,6 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleGoogleSignIn() async {
+    final l10n = context.l10n;
     setState(() => _isGoogleLoading = true);
 
     try {
@@ -62,13 +64,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       _showError(_mapGoogleErrorCode(e.code));
     } catch (_) {
-      _showError('Google sign-in failed. Please try again.');
+      _showError(l10n.authGoogleSignInFailedGeneric);
     } finally {
       if (mounted) setState(() => _isGoogleLoading = false);
     }
   }
 
   Future<void> _handleSignIn() async {
+    final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -89,7 +92,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _showError(_mapErrorCode(e.code));
       }
     } catch (_) {
-      _showError('An unexpected error occurred. Please try again.');
+      _showError(l10n.authUnexpected);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -98,15 +101,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // Changed: shows error and a "Forgot Password?" button only when login fails.
   void _showInvalidCredentialSnackBar() {
     if (!mounted) return;
+    final l10n = context.l10n;
 
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: const Text('อีเมลหรือรหัสผ่านไม่ถูกต้อง'),
+          content: Text(l10n.authInvalidCredentials),
           duration: const Duration(seconds: 6),
           action: SnackBarAction(
-            label: 'Forgot Password?',
+            label: l10n.authForgotPassword,
             onPressed: _openForgotPassword,
           ),
         ),
@@ -133,27 +137,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   String _mapErrorCode(String code) {
+    final l10n = context.l10n;
     return switch (code) {
-      'invalid-email' => 'The email address is not valid.',
-      'user-disabled' => 'This account has been disabled.',
+      'invalid-email' => l10n.authErrorInvalidEmail,
+      'user-disabled' => l10n.authErrorUserDisabled,
       'invalid-credential' =>
-        'Invalid credentials. Check your email and password.',
+        l10n.authInvalidCredentials,
       'too-many-requests' =>
-        'Too many attempts. Please wait a moment and try again.',
-      _ => 'Login failed ($code). Please try again.',
+        l10n.authErrorTooManyRequests,
+      _ => l10n.authErrorLoginFailed(code),
     };
   }
 
   String _mapGoogleErrorCode(String code) {
+    final l10n = context.l10n;
     return switch (code) {
       'popup-blocked' =>
-        'Sign-in popup was blocked. Please allow popups for this site.',
-      'popup-closed-by-user' => 'Sign-in was cancelled.',
-      'cancelled-popup-request' => 'Sign-in was cancelled.',
+        l10n.authErrorGooglePopupBlocked,
+      'popup-closed-by-user' => l10n.authErrorGoogleCancelled,
+      'cancelled-popup-request' => l10n.authErrorGoogleCancelled,
       'account-exists-with-different-credential' =>
-        'An account already exists with this email using a different sign-in method.',
-      'user-disabled' => 'This account has been disabled.',
-      _ => 'Google sign-in failed ($code). Please try again.',
+        l10n.authErrorGoogleAccountExists,
+      'user-disabled' => l10n.authErrorUserDisabled,
+      _ => l10n.authErrorGoogleFailed(code),
     };
   }
 
@@ -174,6 +180,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final tt = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
 
     return Scaffold(
       body: DecoratedBox(
@@ -224,7 +231,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 borderRadius: BorderRadius.circular(18),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppTheme.primary.withValues(alpha: 0.26),
+                                    color: AppTheme.primary
+                                        .withValues(alpha: 0.26),
                                     blurRadius: 18,
                                     offset: const Offset(0, 8),
                                   ),
@@ -238,32 +246,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: 18),
                           Text(
-                            'Welcome back',
+                            l10n.authWelcomeBack,
                             textAlign: TextAlign.center,
                             style: tt.headlineSmall,
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Sign in to continue organizing your work.',
+                            l10n.authSignInSubtitle,
                             textAlign: TextAlign.center,
                             style: tt.bodyMedium,
                           ),
                           const SizedBox(height: 24),
                           CustomTextField(
                             controller: _emailCtrl,
-                            label: 'Email',
-                            hintText: 'name@university.edu',
-                            prefixIcon: const Icon(Icons.alternate_email_rounded),
+                            label: l10n.authEmailLabel,
+                            hintText: l10n.authEmailHintAcademic,
+                            prefixIcon:
+                                const Icon(Icons.alternate_email_rounded),
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
                             autofillHints: const [AutofillHints.email],
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Email is required.';
+                                return l10n.authEmailRequired;
                               }
                               if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
                                   .hasMatch(value.trim())) {
-                                return 'Enter a valid email address.';
+                                return l10n.authEmailInvalid;
                               }
                               return null;
                             },
@@ -271,8 +280,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(height: 16),
                           CustomTextField(
                             controller: _passwordCtrl,
-                            label: 'Password',
-                            hintText: 'Enter your password',
+                            label: l10n.authPasswordLabel,
+                            hintText: l10n.authPasswordHint,
                             prefixIcon: const Icon(Icons.lock_outline_rounded),
                             obscureText: true,
                             textInputAction: TextInputAction.done,
@@ -280,17 +289,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             onFieldSubmitted: (_) => _handleSignIn(),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Password is required.';
+                                return l10n.authPasswordRequired;
                               }
                               if (value.trim().length < 6) {
-                                return 'Password must be at least 6 characters.';
+                                return l10n.authPasswordMinLength;
                               }
                               return null;
                             },
                           ),
                           const SizedBox(height: 20),
                           CustomButton(
-                            label: 'Login',
+                            label: l10n.authLogin,
                             onPressed: _handleSignIn,
                             isLoading: _isLoading,
                             icon: Icons.login_rounded,
@@ -302,9 +311,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 child: Divider(color: cs.outlineVariant),
                               ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
                                 child: Text(
-                                  'OR',
+                                  l10n.authOr,
                                   style: tt.bodySmall,
                                 ),
                               ),
@@ -315,15 +325,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: 16),
                           OutlinedButton.icon(
-                            onPressed: _isGoogleLoading ? null : _handleGoogleSignIn,
+                            onPressed:
+                                _isGoogleLoading ? null : _handleGoogleSignIn,
                             icon: _isGoogleLoading
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
                                   )
-                                : const Icon(Icons.g_mobiledata_rounded, size: 22),
-                            label: const Text('Continue with Google'),
+                                : const Icon(Icons.g_mobiledata_rounded,
+                                    size: 22),
+                            label: Text(l10n.authContinueWithGoogle),
                           ),
                           const SizedBox(height: 10),
                           TextButton(
@@ -335,7 +348,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                               );
                             },
-                            child: const Text("Don't have an account? Register"),
+                            child: Text(l10n.authNoAccountRegister),
                           ),
                         ],
                       ),

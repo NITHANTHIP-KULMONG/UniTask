@@ -40,12 +40,12 @@ class TimerScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.tune),
-            tooltip: 'Settings',
+            tooltip: l10n.timerTooltipSettings,
             onPressed: () => _showPrefsDialog(context, ref),
           ),
           IconButton(
             icon: const Icon(Icons.history),
-            tooltip: 'History',
+            tooltip: l10n.timerTooltipHistory,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const TimerHistoryScreen()),
             ),
@@ -69,11 +69,14 @@ class TimerScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Today',
+                          l10n.timerToday,
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                         Text(
-                          '$dailyPomodoros pomodoros • ${_fmtDuration(dailySeconds)}',
+                          l10n.timerDailySummary(
+                            dailyPomodoros,
+                            _fmtDuration(context, dailySeconds),
+                          ),
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
@@ -104,7 +107,7 @@ class TimerScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Subject',
+                    Text(l10n.timerSubjectLabel,
                         style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
@@ -142,12 +145,19 @@ class TimerScreen extends ConsumerWidget {
             child: SizedBox(
               width: 240,
               height: 240,
-              child: CustomPaint(
-                painter: _RingPainter(
-                  progress: pomo.progress,
-                  ringColor: _phaseColor(pomo.phase, cs),
-                  trackColor: cs.surfaceContainerHighest,
-                ),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0.0, end: pomo.progress),
+                duration: const Duration(milliseconds: 300),
+                builder: (context, value, child) {
+                  return CustomPaint(
+                    painter: _RingPainter(
+                      progress: value,
+                      ringColor: _phaseColor(pomo.phase, cs),
+                      trackColor: cs.surfaceContainerHighest,
+                    ),
+                    child: child,
+                  );
+                },
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -161,7 +171,7 @@ class TimerScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _phaseLabel(pomo),
+                        _phaseLabel(context, pomo),
                         style: Theme.of(context)
                             .textTheme
                             .titleSmall
@@ -234,60 +244,76 @@ class TimerScreen extends ConsumerWidget {
     bool hasSubjects,
     String? dropdownValue,
   ) {
-    if (!pomo.isActive) {
-      // Idle → Start
-      return SizedBox(
-        width: double.infinity,
-        child: FilledButton.icon(
-          onPressed: hasSubjects && dropdownValue != null ? ctrl.start : null,
-          icon: const Icon(Icons.play_arrow_rounded),
-          label: const Text('Start Focus'),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SizeTransition(
+          sizeFactor: animation,
+          child: child,
         ),
-      );
-    }
-
-    return Row(
-      children: [
-        // Pause / Resume
-        Expanded(
-          child: pomo.isPaused
-              ? FilledButton.icon(
-                  onPressed: ctrl.resume,
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('Resume'),
-                )
-              : FilledButton.tonalIcon(
-                  onPressed: ctrl.pause,
-                  icon: const Icon(Icons.pause_rounded),
-                  label: const Text('Pause'),
+      ),
+      child: !pomo.isActive
+          ? SizedBox(
+              key: const ValueKey('start_btn'),
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed:
+                    hasSubjects && dropdownValue != null ? ctrl.start : null,
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: Text(context.l10n.timerStartFocus),
+              ),
+            )
+          : Row(
+              key: const ValueKey('active_controls'),
+              children: [
+                // Pause / Resume
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: pomo.isPaused
+                        ? FilledButton.icon(
+                            key: const ValueKey('resume'),
+                            onPressed: ctrl.resume,
+                            icon: const Icon(Icons.play_arrow_rounded),
+                            label: Text(context.l10n.timerResume),
+                          )
+                        : FilledButton.tonalIcon(
+                            key: const ValueKey('pause'),
+                            onPressed: ctrl.pause,
+                            icon: const Icon(Icons.pause_rounded),
+                            label: Text(context.l10n.timerPause),
+                          ),
+                  ),
                 ),
-        ),
-        const SizedBox(width: 10),
+                const SizedBox(width: 10),
 
-        // Skip (during breaks)
-        if (!pomo.isWorkPhase)
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: ctrl.skip,
-              icon: const Icon(Icons.skip_next_rounded),
-              label: const Text('Skip'),
-            ),
-          ),
-        if (!pomo.isWorkPhase) const SizedBox(width: 10),
+                // Skip (during breaks)
+                if (!pomo.isWorkPhase) ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: ctrl.skip,
+                      icon: const Icon(Icons.skip_next_rounded),
+                      label: Text(context.l10n.timerSkip),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                ],
 
-        // Reset
-        Expanded(
-          child: FilledButton.icon(
-            onPressed: ctrl.reset,
-            icon: const Icon(Icons.stop_rounded),
-            label: const Text('Reset'),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
+                // Reset
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: ctrl.reset,
+                    icon: const Icon(Icons.stop_rounded),
+                    label: Text(context.l10n.timerReset),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      foregroundColor: Theme.of(context).colorScheme.onError,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -295,6 +321,7 @@ class TimerScreen extends ConsumerWidget {
 
   void _showPrefsDialog(BuildContext context, WidgetRef ref) {
     final prefs = ref.read(pomodoroPrefsProvider);
+    final l10n = context.l10n;
     final workCtrl = TextEditingController(text: prefs.workMinutes.toString());
     final shortCtrl =
         TextEditingController(text: prefs.shortBreakMinutes.toString());
@@ -306,31 +333,31 @@ class TimerScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Timer Settings'),
+        title: Text(l10n.timerSettingsTitle),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _PrefsNumberField(
-                label: 'Work (min)',
+                label: l10n.timerSettingsWorkMinutesLabel,
                 hint: '1-120',
                 controller: workCtrl,
               ),
               const SizedBox(height: 12),
               _PrefsNumberField(
-                label: 'Short break (min)',
+                label: l10n.timerSettingsShortBreakMinutesLabel,
                 hint: '1-60',
                 controller: shortCtrl,
               ),
               const SizedBox(height: 12),
               _PrefsNumberField(
-                label: 'Long break (min)',
+                label: l10n.timerSettingsLongBreakMinutesLabel,
                 hint: '1-60',
                 controller: longCtrl,
               ),
               const SizedBox(height: 12),
               _PrefsNumberField(
-                label: 'Rounds before long break',
+                label: l10n.timerSettingsRoundsLabel,
                 hint: '1-12',
                 controller: roundsCtrl,
               ),
@@ -339,7 +366,9 @@ class TimerScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.commonCancel),
+          ),
           FilledButton(
             onPressed: () {
               final w = int.tryParse(workCtrl.text) ?? 25;
@@ -356,7 +385,7 @@ class TimerScreen extends ConsumerWidget {
               );
               Navigator.pop(ctx);
             },
-            child: const Text('Save'),
+            child: Text(l10n.commonSave),
           ),
         ],
       ),
@@ -516,14 +545,15 @@ Color _phaseColor(PomodoroPhase phase, ColorScheme cs) {
   };
 }
 
-String _phaseLabel(PomodoroState state) {
-  if (!state.isActive) return 'Ready';
-  if (state.isPaused) return 'Paused';
+String _phaseLabel(BuildContext context, PomodoroState state) {
+  final l10n = context.l10n;
+  if (!state.isActive) return l10n.timerPhaseReady;
+  if (state.isPaused) return l10n.timerPhasePaused;
   return state.phase == PomodoroPhase.work
-      ? 'Focus Time'
+      ? l10n.timerPhaseFocus
       : state.phase == PomodoroPhase.shortBreak
-          ? 'Short Break'
-          : 'Long Break';
+          ? l10n.timerPhaseShortBreak
+          : l10n.timerPhaseLongBreak;
 }
 
 String _fmtCountdown(int seconds) {
@@ -533,13 +563,14 @@ String _fmtCountdown(int seconds) {
   return '${m.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
 }
 
-String _fmtDuration(int totalSeconds) {
+String _fmtDuration(BuildContext context, int totalSeconds) {
+  final l10n = context.l10n;
   final safe = totalSeconds.clamp(0, 999999);
   final h = safe ~/ 3600;
   final m = (safe % 3600) ~/ 60;
   final s = safe % 60;
   if (h > 0) {
-    return '${h}h ${m.toString().padLeft(2, '0')}m';
+    return l10n.timerDurationHoursMinutes(h, m);
   }
-  return '${m}m ${s.toString().padLeft(2, '0')}s';
+  return l10n.timerDurationMinutesSeconds(m, s);
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../auth/models/app_user.dart';
 import '../../auth/services/auth_service.dart';
 import '../../tasks/models/task.dart';
@@ -38,6 +39,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
   Widget build(BuildContext context) {
     final appUserAsync = ref.watch(appUserProvider);
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
 
     final email = appUserAsync.whenOrNull(
           data: (u) => u?.email,
@@ -46,17 +48,18 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
+        title: Text(l10n.adminDashboardTitle),
         centerTitle: true,
         actions: [
           // Admin badge
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: Chip(
-              avatar: Icon(Icons.shield, size: 16, color: cs.onTertiaryContainer),
-              label: Text('Admin',
-                  style: TextStyle(
-                      fontSize: 12, color: cs.onTertiaryContainer)),
+              avatar:
+                  Icon(Icons.shield, size: 16, color: cs.onTertiaryContainer),
+              label: Text(l10n.adminRoleAdmin,
+                  style:
+                      TextStyle(fontSize: 12, color: cs.onTertiaryContainer)),
               backgroundColor: cs.tertiaryContainer,
               side: BorderSide.none,
               visualDensity: VisualDensity.compact,
@@ -64,15 +67,15 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: 'Sign out',
+            tooltip: l10n.commonSignOut,
             onPressed: () => ref.read(authServiceProvider).signOut(),
           ),
         ],
         bottom: TabBar(
           controller: _tabCtrl,
-          tabs: const [
-            Tab(icon: Icon(Icons.people_outline), text: 'Users'),
-            Tab(icon: Icon(Icons.checklist), text: 'All Tasks'),
+          tabs: [
+            Tab(icon: const Icon(Icons.people_outline), text: l10n.adminTabUsers),
+            Tab(icon: const Icon(Icons.checklist), text: l10n.adminTabAllTasks),
           ],
         ),
       ),
@@ -84,7 +87,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
             color: cs.tertiaryContainer.withValues(alpha: 0.2),
             child: Text(
-              'Signed in as $email',
+              l10n.adminSignedInAs(email),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: cs.onSurfaceVariant,
                   ),
@@ -115,16 +118,17 @@ class _UsersTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usersAsync = ref.watch(allUsersProvider);
+    final l10n = context.l10n;
 
     return usersAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => _ErrorView(
-        message: 'Failed to load users.\n$e',
+        message: l10n.adminUsersLoadFailed('$e'),
         onRetry: () => ref.invalidate(allUsersProvider),
       ),
       data: (users) {
         if (users.isEmpty) {
-          return const Center(child: Text('No users found.'));
+          return Center(child: Text(l10n.adminUsersEmpty));
         }
         return ListView.separated(
           padding: const EdgeInsets.all(16),
@@ -144,6 +148,7 @@ class _UserTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final isAdmin = user.isAdmin;
     final photoUrl = _normalizePhotoUrl(user.photoUrl);
     final fallbackInitial = user.name.isNotEmpty
@@ -162,7 +167,7 @@ class _UserTile extends StatelessWidget {
         subtitle: Text(user.email),
         trailing: Chip(
           label: Text(
-            isAdmin ? 'Admin' : 'User',
+            isAdmin ? l10n.adminRoleAdmin : l10n.adminRoleUser,
             style: TextStyle(
               fontSize: 11,
               color: isAdmin ? cs.onTertiaryContainer : cs.onSurfaceVariant,
@@ -194,16 +199,17 @@ class _AllTasksTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksAsync = ref.watch(allTasksProvider);
+    final l10n = context.l10n;
 
     return tasksAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => _ErrorView(
-        message: 'Failed to load tasks.\n$e',
+        message: l10n.adminTasksLoadFailed('$e'),
         onRetry: () => ref.invalidate(allTasksProvider),
       ),
       data: (tasks) {
         if (tasks.isEmpty) {
-          return const Center(child: Text('No tasks found.'));
+          return Center(child: Text(l10n.adminTasksEmpty));
         }
         return ListView.separated(
           padding: const EdgeInsets.all(16),
@@ -223,10 +229,16 @@ class _AdminTaskTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final statusColor = switch (task.status) {
       TaskStatus.todo => cs.outline,
       TaskStatus.doing => cs.primary,
       TaskStatus.done => Colors.green,
+    };
+    final statusLabel = switch (task.status) {
+      TaskStatus.todo => l10n.taskStatusPending,
+      TaskStatus.doing => l10n.taskStatusInProgress,
+      TaskStatus.done => l10n.taskStatusCompleted,
     };
 
     return Card(
@@ -246,12 +258,11 @@ class _AdminTaskTile extends StatelessWidget {
               : null,
         ),
         subtitle: Text(
-          'Owner: ${task.userId.substring(0, 8)}…',
+          l10n.adminTaskOwner(task.userId.substring(0, 8)),
           style: Theme.of(context).textTheme.bodySmall,
         ),
         trailing: Chip(
-          label: Text(task.status.label,
-              style: const TextStyle(fontSize: 11)),
+          label: Text(statusLabel, style: const TextStyle(fontSize: 11)),
           backgroundColor: statusColor.withValues(alpha: 0.15),
           side: BorderSide.none,
           visualDensity: VisualDensity.compact,
@@ -285,7 +296,7 @@ class _ErrorView extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(context.l10n.commonRetry),
             ),
           ],
         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../subjects/presentation/subject_controller.dart';
 import '../models/task.dart';
 import '../services/task_service.dart';
@@ -37,13 +38,14 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final task = _findTask();
     final subjects = ref.watch(userSubjectsProvider).valueOrNull ?? const [];
 
     if (task == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Edit Assignment')),
-        body: const Center(child: Text('Task not found.')),
+        appBar: AppBar(title: Text(l10n.taskEditTitle)),
+        body: Center(child: Text(l10n.taskEditNotFound)),
       );
     }
 
@@ -59,7 +61,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
         : null;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Assignment')),
+      appBar: AppBar(title: Text(l10n.taskEditTitle)),
       body: SafeArea(
         child: Column(
           children: [
@@ -75,7 +77,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Edit assignment',
+                            l10n.taskEditHeader,
                             style: Theme.of(context)
                                 .textTheme
                                 .headlineSmall
@@ -83,7 +85,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Update details and save changes.',
+                            l10n.taskEditSubtitle,
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
@@ -96,41 +98,135 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
                           const SizedBox(height: 18),
                           TextFormField(
                             controller: _titleController,
-                            decoration:
-                                const InputDecoration(labelText: 'Title'),
+                            decoration: InputDecoration(
+                                labelText: l10n.taskFormTitleLabel),
                             validator: (v) {
                               if (v == null || v.trim().isEmpty) {
-                                return 'Title is required.';
+                                return l10n.taskFormTitleRequired;
                               }
                               return null;
                             },
                           ),
                           const SizedBox(height: 12),
-                          DropdownButtonFormField<String>(
+                          FormField<String>(
                             initialValue: selectedSubjectValue,
-                            decoration:
-                                const InputDecoration(labelText: 'Subject'),
-                            items: subjects
-                                .map(
-                                  (s) => DropdownMenuItem<String>(
-                                    value: s.id,
-                                    child: Text(s.name),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (v) => setState(() {
-                              _selectedSubjectId = v;
-                            }),
                             validator: (_) {
                               if (selectedSubjectValue == null) {
-                                return 'Subject is required.';
+                                return l10n.taskFormSubjectRequired;
                               }
                               return null;
+                            },
+                            builder: (state) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    l10n.taskFormSelectSubject,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          color: state.hasError
+                                              ? Theme.of(context)
+                                                  .colorScheme
+                                                  .error
+                                              : null,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    height: 56,
+                                    child: ListView.separated(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: subjects.length,
+                                      separatorBuilder: (_, __) =>
+                                          const SizedBox(width: 8),
+                                      itemBuilder: (context, index) {
+                                        final subject = subjects[index];
+                                        final isSelected =
+                                            selectedSubjectValue == subject.id;
+                                        return GestureDetector(
+                                          onTap: () {
+                                            setState(() => _selectedSubjectId =
+                                                subject.id);
+                                            state.didChange(subject.id);
+                                          },
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                                milliseconds: 200),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16),
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? subject.color.color
+                                                      .withOpacity(0.15)
+                                                  : Theme.of(context)
+                                                      .colorScheme
+                                                      .surfaceContainerHighest,
+                                              border: Border.all(
+                                                color: isSelected
+                                                    ? subject.color.color
+                                                    : Colors.transparent,
+                                                width: 2,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                AnimatedContainer(
+                                                  duration: const Duration(
+                                                      milliseconds: 200),
+                                                  width: 12,
+                                                  height: 12,
+                                                  decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    color: subject.color.color,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  subject.name,
+                                                  style: TextStyle(
+                                                    fontWeight: isSelected
+                                                        ? FontWeight.bold
+                                                        : FontWeight.w500,
+                                                    color: isSelected
+                                                        ? subject.color.color
+                                                        : Theme.of(context)
+                                                            .colorScheme
+                                                            .onSurfaceVariant,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  if (state.hasError)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 8, left: 16),
+                                      child: Text(
+                                        state.errorText!,
+                                        style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .error,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
                             },
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'Due date',
+                            l10n.taskDueDateLabel,
                             style: Theme.of(context).textTheme.labelLarge,
                           ),
                           const SizedBox(height: 8),
@@ -139,8 +235,12 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
                             icon: const Icon(Icons.calendar_today_outlined),
                             label: Text(
                               _selectedDueDateTime == null
-                                  ? 'No due date'
-                                  : 'Due ${DateFormat('MMM d, HH:mm').format(_selectedDueDateTime!)}',
+                                  ? l10n.taskNoDueDate
+                                  : l10n.taskSubtitleDue(DateFormat(
+                                      'MMM d, HH:mm',
+                                      Localizations.localeOf(context)
+                                          .toLanguageTag(),
+                                    ).format(_selectedDueDateTime!)),
                             ),
                           ),
                           if (_selectedDueDateTime != null)
@@ -149,13 +249,14 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
                                 setState(() => _selectedDueDateTime = null);
                               },
                               icon: const Icon(Icons.clear),
-                              label: const Text('Clear due date'),
+                              label: Text(l10n.taskClearDueDate),
                             ),
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _descriptionController,
-                            decoration:
-                                const InputDecoration(labelText: 'Description'),
+                            decoration: InputDecoration(
+                              labelText: l10n.taskFormDescriptionLabel,
+                            ),
                             minLines: 2,
                             maxLines: 4,
                           ),
@@ -179,7 +280,8 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.save_outlined),
-                  label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
+                  label:
+                      Text(_isSaving ? l10n.taskSaving : l10n.taskSaveChanges),
                 ),
               ),
             ),
@@ -235,7 +337,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
     if (!selectedDateTime.isAfter(DateTime.now())) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a future date and time.')),
+        SnackBar(content: Text(context.l10n.taskFormFutureDateRequired)),
       );
       return;
     }
@@ -264,7 +366,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save changes: $e')),
+        SnackBar(content: Text(context.l10n.taskSaveFailed('$e'))),
       );
       setState(() => _isSaving = false);
     }

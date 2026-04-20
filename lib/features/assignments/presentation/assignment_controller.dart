@@ -11,8 +11,7 @@ export '../services/assignment_service.dart'
 ///
 /// The real-time list comes from [userAssignmentsProvider] (a StreamProvider
 /// backed by Firestore). This controller only handles mutations.
-final assignmentControllerProvider =
-    Provider<AssignmentController>((ref) {
+final assignmentControllerProvider = Provider<AssignmentController>((ref) {
   return AssignmentController(ref.read(assignmentServiceProvider));
 });
 
@@ -21,9 +20,11 @@ class AssignmentController {
   AssignmentController(this._service);
   final AssignmentService _service;
 
-  Future<void> add(Assignment assignment) => _service.createAssignment(assignment);
+  Future<void> add(Assignment assignment) =>
+      _service.createAssignment(assignment);
 
-  Future<void> update(Assignment assignment) => _service.updateAssignment(assignment);
+  Future<void> update(Assignment assignment) =>
+      _service.updateAssignment(assignment);
 
   Future<void> deleteById(String id) => _service.deleteAssignment(id);
 

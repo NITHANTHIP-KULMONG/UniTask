@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../auth/services/auth_service.dart';
 import '../../tasks/presentation/user_home_page.dart';
 import '../../subjects/domain/subject.dart';
@@ -45,24 +46,25 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
   }
 
   Future<void> _submit() async {
+    final l10n = context.l10n;
     final title = _titleCtrl.text.trim();
     final weight = double.tryParse(_weightCtrl.text.trim());
 
     if (_selectedSubject == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a subject')),
+        SnackBar(content: Text(l10n.assignmentSelectSubjectError)),
       );
       return;
     }
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a title')),
+        SnackBar(content: Text(l10n.assignmentTitleRequiredError)),
       );
       return;
     }
     if (weight == null || weight <= 0 || weight > 100) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Weight must be 1-100')),
+        SnackBar(content: Text(l10n.assignmentWeightRangeError)),
       );
       return;
     }
@@ -74,7 +76,7 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
     try {
       final now = DateTime.now();
       final assignment = Assignment(
-        id: '',  // Firestore auto-generates the ID
+        id: '', // Firestore auto-generates the ID
         ownerId: uid,
         subjectId: _selectedSubject!.id,
         title: title,
@@ -89,13 +91,13 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Assignment created')),
+          SnackBar(content: Text(l10n.assignmentCreated)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create assignment: $e')),
+          SnackBar(content: Text(l10n.assignmentCreateFailed('$e'))),
         );
       }
     } finally {
@@ -105,6 +107,7 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final subjectsState = ref.watch(userSubjectsProvider);
     final subjects = subjectsState.valueOrNull ?? <Subject>[];
     if (_selectedSubject == null && subjects.isNotEmpty) {
@@ -118,12 +121,13 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
         '${_dueDate.year}-${_dueDate.month.toString().padLeft(2, '0')}-${_dueDate.day.toString().padLeft(2, '0')}';
 
     return Padding(
-      padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: bottom + 16),
+      padding:
+          EdgeInsets.only(left: 16, right: 16, top: 16, bottom: bottom + 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'Add Assignment',
+          Text(
+            l10n.assignmentAddTitle,
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
@@ -132,7 +136,7 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Please create a subject first.',
+                  l10n.assignmentNeedSubjectFirst,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(context).colorScheme.error,
                       ),
@@ -142,7 +146,7 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
                     Navigator.of(context).pop();
                     ref.read(selectedTabIndexProvider.notifier).state = 2;
                   },
-                  child: const Text('Create subject'),
+                  child: Text(l10n.assignmentCreateSubjectAction),
                 ),
               ],
             ),
@@ -150,9 +154,9 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
           ],
           TextField(
             controller: _titleCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Title',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.taskFormTitleLabel,
+              border: const OutlineInputBorder(),
             ),
             textInputAction: TextInputAction.next,
           ),
@@ -176,9 +180,9 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
                 : (subject) {
                     setState(() => _selectedSubject = subject);
                   },
-            decoration: const InputDecoration(
-              labelText: 'Subject',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.assignmentSubjectLabel,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
@@ -187,10 +191,11 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
               Expanded(
                 child: TextField(
                   controller: _weightCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Weight %',
-                    border: OutlineInputBorder(),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: l10n.assignmentWeightLabel,
+                    border: const OutlineInputBorder(),
                   ),
                 ),
               ),
@@ -215,7 +220,7 @@ class _AddAssignmentSheetState extends ConsumerState<AddAssignmentSheet> {
                       width: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Save'),
+                  : Text(l10n.commonSave),
             ),
           ),
         ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../subjects/presentation/subject_controller.dart';
 import '../models/task.dart';
 import '../services/task_service.dart';
@@ -17,12 +18,13 @@ class TaskDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final task = _resolveTask(ref);
     if (task == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Assignment Detail')),
-        body: const Center(
-          child: Text('Task no longer exists.'),
+        appBar: AppBar(title: Text(l10n.taskDetailTitle)),
+        body: Center(
+          child: Text(l10n.taskDetailMissing),
         ),
       );
     }
@@ -41,7 +43,7 @@ class TaskDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Assignment Detail'),
+        title: Text(l10n.taskDetailTitle),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -77,16 +79,19 @@ class TaskDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 18),
                   _DetailRow(
                     icon: Icons.calendar_today_outlined,
-                    label: 'Due date',
+                    label: l10n.taskDueDateLabel,
                     value: task.dueDateTime == null
-                        ? 'No due date'
-                        : DateFormat('MMM d, HH:mm').format(task.dueDateTime!),
+                        ? l10n.taskNoDueDate
+                        : DateFormat(
+                            'MMM d, HH:mm',
+                            Localizations.localeOf(context).toLanguageTag(),
+                          ).format(task.dueDateTime!),
                   ),
                   const SizedBox(height: 16),
                   _DetailRow(
                     icon: Icons.access_time_outlined,
-                    label: 'Status',
-                    value: _statusLabel(task),
+                    label: l10n.taskStatusLabel,
+                    value: _statusLabel(context, task),
                   ),
                 ],
               ),
@@ -103,7 +108,7 @@ class TaskDetailScreen extends ConsumerWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    isDone ? 'Moved to To Do' : 'Marked as completed',
+                    isDone ? l10n.taskMovedToTodo : l10n.taskMarkedCompleted,
                   ),
                 ),
               );
@@ -111,7 +116,8 @@ class TaskDetailScreen extends ConsumerWidget {
             icon: Icon(
               isDone ? Icons.restart_alt : Icons.check_circle_outline,
             ),
-            label: Text(isDone ? 'Mark as To Do' : 'Mark as Completed'),
+            label:
+                Text(isDone ? l10n.taskMarkAsTodo : l10n.taskMarkAsCompleted),
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
@@ -123,7 +129,7 @@ class TaskDetailScreen extends ConsumerWidget {
               );
             },
             icon: const Icon(Icons.edit_outlined),
-            label: const Text('Edit Assignment'),
+            label: Text(l10n.taskEditTitle),
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
@@ -133,7 +139,7 @@ class TaskDetailScreen extends ConsumerWidget {
             ),
             onPressed: () => _confirmDelete(context, ref, task),
             icon: const Icon(Icons.delete_outline),
-            label: const Text('Delete Assignment'),
+            label: Text(l10n.taskDeleteTitle),
           ),
         ],
       ),
@@ -155,22 +161,23 @@ class TaskDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     Task task,
   ) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Assignment'),
-        content: Text('Delete "${task.title}"? This cannot be undone.'),
+        title: Text(l10n.taskDeleteTitle),
+        content: Text(l10n.taskDeleteMessage(task.title)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -183,13 +190,14 @@ class TaskDetailScreen extends ConsumerWidget {
   }
 }
 
-String _statusLabel(Task task) {
+String _statusLabel(BuildContext context, Task task) {
+  final l10n = context.l10n;
   final isDone = task.status == TaskStatus.done || task.isCompleted;
-  if (isDone) return 'Completed';
+  if (isDone) return l10n.taskStatusCompleted;
   return switch (task.status) {
-    TaskStatus.todo => 'Pending',
-    TaskStatus.doing => 'In progress',
-    TaskStatus.done => 'Completed',
+    TaskStatus.todo => l10n.taskStatusPending,
+    TaskStatus.doing => l10n.taskStatusInProgress,
+    TaskStatus.done => l10n.taskStatusCompleted,
   };
 }
 
