@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../../shared/widgets/app_loading_screen.dart';
 import '../services/auth_service.dart';
 import '../../dashboard/presentation/home_shell.dart';
@@ -21,13 +22,14 @@ class AuthWrapper extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
+    final l10n = context.l10n;
 
     return authState.when(
       // Still resolving the persisted login session.
-      loading: () => const AppLoadingScreen(message: 'Checking session...'),
+      loading: () => AppLoadingScreen(message: l10n.authCheckingSession),
       // Stream error (rare) — show message + retry.
       error: (e, _) => Scaffold(
-        body: Center(child: Text('Auth error: $e')),
+        body: Center(child: Text(l10n.authGenericError('$e'))),
       ),
       // Auth state resolved.
       data: (user) {

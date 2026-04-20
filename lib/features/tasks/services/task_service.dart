@@ -285,6 +285,34 @@ class TaskService {
     await _tasksCol.doc(taskId).delete();
   }
 
+  Future<void> restoreTask(Task task) async {
+    final ownerId = _auth.currentUser?.uid;
+    if (ownerId == null || ownerId.isEmpty) return;
+
+    await _tasksCol.doc(task.id).set({
+      'title': task.title,
+      'description': task.description,
+      'ownerId': ownerId,
+      'subjectId': task.subjectId,
+      'isCompleted': task.isCompleted,
+      'status': task.status.name,
+      'dueDateTime': task.dueDateTime == null
+          ? null
+          : Timestamp.fromDate(_normalizeDueDateTime(task.dueDateTime!)),
+      'createdAt': Timestamp.fromDate(task.createdAt),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    await _syncTaskNotification(
+      taskId: task.id,
+      dueDateTime: task.dueDateTime == null
+          ? null
+          : _normalizeDueDateTime(task.dueDateTime!),
+      status: task.status,
+      isCompleted: task.isCompleted,
+    );
+  }
+
   Future<void> _syncTaskNotification({
     required String taskId,
     required DateTime? dueDateTime,

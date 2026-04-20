@@ -24,6 +24,14 @@ class UniTaskApp extends ConsumerWidget {
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: const TextScaler.linear(1.0),
+          ),
+          child: child!,
+        );
+      },
       onGenerateRoute: (settings) {
         if (settings.name == '/landingpage') {
           return MaterialPageRoute<void>(

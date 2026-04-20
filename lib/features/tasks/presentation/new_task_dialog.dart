@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../shared/widgets/custom_button.dart';
-import '../../../shared/widgets/custom_card.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../shared/widgets/custom_text_field.dart';
 
 import '../../subjects/presentation/subject_controller.dart';
@@ -71,7 +70,7 @@ class _NewTaskDialogState extends ConsumerState<NewTaskDialog> {
     if (!selectedDateTime.isAfter(DateTime.now())) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a future date and time.')),
+        SnackBar(content: Text(context.l10n.taskFormFutureDateRequired)),
       );
       return;
     }
@@ -100,7 +99,7 @@ class _NewTaskDialogState extends ConsumerState<NewTaskDialog> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create task: $error')),
+        SnackBar(content: Text(context.l10n.taskFormCreateFailed('$error'))),
       );
       setState(() => _isSubmitting = false);
     }
@@ -109,137 +108,295 @@ class _NewTaskDialogState extends ConsumerState<NewTaskDialog> {
   @override
   Widget build(BuildContext context) {
     final subjectsAsync = ref.watch(userSubjectsProvider);
+    final l10n = context.l10n;
 
     final subjects = subjectsAsync.valueOrNull ?? const [];
     final canCreate = !_isSubmitting && _selectedSubjectId != null;
     final cs = Theme.of(context).colorScheme;
 
-    return AlertDialog(
-      title: const Text('New Task'),
-      contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                CustomCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      CustomTextField(
-                        controller: _titleController,
-                        label: 'Title',
-                        hintText: 'What needs to be done?',
-                        textInputAction: TextInputAction.next,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Title is required.';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      CustomTextField(
-                        controller: _descriptionController,
-                        label: 'Description',
-                        hintText: 'Optional notes',
-                        textInputAction: TextInputAction.newline,
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedSubjectId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(labelText: 'Subject'),
-                        items: subjects
-                            .map(
-                              (subject) => DropdownMenuItem<String>(
-                                value: subject.id,
-                                child: Text(subject.name),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() => _selectedSubjectId = value);
-                        },
-                        validator: (_) {
-                          if (_selectedSubjectId == null) {
-                            return 'Subject is required.';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: cs.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _selectedDueDateTime == null
-                                    ? 'No due date'
-                                    : DateFormat('MMM d, HH:mm')
-                                        .format(_selectedDueDateTime!),
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: _pickDueDateTime,
-                              child: const Text('Pick date & time'),
-                            ),
-                            if (_selectedDueDateTime != null)
-                              IconButton(
-                                tooltip: 'Clear due date',
-                                onPressed: () {
-                                  setState(() => _selectedDueDateTime = null);
-                                },
-                                icon: const Icon(Icons.clear_rounded),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (subjectsAsync.isLoading)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 12),
-                    child: LinearProgressIndicator(),
-                  ),
-                const SizedBox(height: 16),
-                Row(
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      margin: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _isSubmitting
-                            ? null
-                            : () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 24),
+                        decoration: BoxDecoration(
+                          color: cs.onSurfaceVariant.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: CustomButton(
-                        label: 'Create',
-                        onPressed: canCreate ? _createTask : null,
-                        isLoading: _isSubmitting,
-                        icon: Icons.add_task_rounded,
+                    Text(
+                      l10n.taskFormCreateTaskTitle,
+                      style: Theme.of(context).textTheme.titleLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    CustomTextField(
+                      controller: _titleController,
+                      label: l10n.taskFormTitleLabel,
+                      hintText: l10n.taskFormTitleHint,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return l10n.taskFormTitleRequired;
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      controller: _descriptionController,
+                      label: l10n.taskFormDescriptionLabel,
+                      hintText: l10n.taskFormDescriptionHint,
+                      textInputAction: TextInputAction.newline,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+                    FormField<String>(
+                      initialValue: _selectedSubjectId,
+                      validator: (_) {
+                        if (_selectedSubjectId == null) {
+                          return l10n.taskFormSubjectRequired;
+                        }
+                        return null;
+                      },
+                      builder: (state) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.taskFormSelectSubject,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    color: state.hasError
+                                        ? Theme.of(context).colorScheme.error
+                                        : null,
+                                  ),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 56,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: subjects.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(width: 8),
+                                itemBuilder: (context, index) {
+                                  final subject = subjects[index];
+                                  final isSelected =
+                                      _selectedSubjectId == subject.id;
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() =>
+                                          _selectedSubjectId = subject.id);
+                                      state.didChange(subject.id);
+                                    },
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 200),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? subject.color.color
+                                                .withOpacity(0.15)
+                                            : cs.surfaceContainerHighest,
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? subject.color.color
+                                              : Colors.transparent,
+                                          width: 2,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          AnimatedContainer(
+                                            duration: const Duration(
+                                                milliseconds: 200),
+                                            width: 12,
+                                            height: 12,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: subject.color.color,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            subject.name,
+                                            style: TextStyle(
+                                              fontWeight: isSelected
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w500,
+                                              color: isSelected
+                                                  ? subject.color.color
+                                                  : cs.onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            if (state.hasError)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(top: 8, left: 16),
+                                child: Text(
+                                  state.errorText!,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _pickDueDateTime,
+                        borderRadius: BorderRadius.circular(16),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _selectedDueDateTime != null
+                                ? cs.primaryContainer.withOpacity(0.5)
+                                : cs.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: _selectedDueDateTime != null
+                                  ? cs.primary.withOpacity(0.3)
+                                  : Colors.transparent,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                size: 20,
+                                color: _selectedDueDateTime != null
+                                    ? cs.primary
+                                    : cs.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _selectedDueDateTime == null
+                                      ? l10n.taskFormNoDueDateTap
+                                      : DateFormat(
+                                          'MMM d, yyyy • HH:mm',
+                                          Localizations.localeOf(context)
+                                              .toLanguageTag(),
+                                        ).format(_selectedDueDateTime!),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: _selectedDueDateTime != null
+                                            ? cs.onPrimaryContainer
+                                            : cs.onSurfaceVariant,
+                                        fontWeight: _selectedDueDateTime != null
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                      ),
+                                ),
+                              ),
+                              if (_selectedDueDateTime != null)
+                                GestureDetector(
+                                  onTap: () => setState(
+                                      () => _selectedDueDateTime = null),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: cs.primary.withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(Icons.close,
+                                        size: 16, color: cs.primary),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
+                    ),
+                    if (subjectsAsync.isLoading)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 16),
+                        child: LinearProgressIndicator(),
+                      ),
+                    const SizedBox(height: 32),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            onPressed: _isSubmitting
+                                ? null
+                                : () => Navigator.of(context).pop(),
+                            child: Text(l10n.commonCancel),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            onPressed: canCreate ? _createTask : null,
+                            icon: _isSubmitting
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white))
+                                : const Icon(Icons.add_rounded),
+                            label: Text(
+                              _isSubmitting
+                                  ? l10n.taskFormCreating
+                                  : l10n.dashboardCreateTask,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

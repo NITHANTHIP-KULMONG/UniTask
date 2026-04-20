@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:unitask/l10n/app_localizations.dart';
 
 import '../../../core/l10n/l10n.dart';
-import '../../../shared/widgets/app_loading_screen.dart';
+import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/services/auth_service.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../subjects/presentation/subject_controller.dart';
@@ -30,6 +30,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appUserAsync = ref.watch(appUserProvider);
+    final authUser = ref.watch(authStateProvider).valueOrNull;
     final tasksAsync = ref.watch(userTasksProvider);
     final subjectsAsync = ref.watch(userSubjectsProvider);
     final dailyStudySecs = ref.watch(dailyStudySecondsProvider);
@@ -41,10 +42,13 @@ class DashboardScreen extends ConsumerWidget {
     final displayName = appUserAsync.whenOrNull(
           data: (u) => u?.name.isNotEmpty == true ? u!.name : u?.email,
         ) ??
-        '';
+        (authUser?.displayName?.trim().isNotEmpty == true
+            ? authUser!.displayName!
+            : authUser?.email ?? '');
     final photoUrl = _normalizePhotoUrl(
-      appUserAsync.whenOrNull(data: (u) => u?.photoUrl),
-    );
+          appUserAsync.whenOrNull(data: (u) => u?.photoUrl),
+        ) ??
+        _normalizePhotoUrl(authUser?.photoURL);
     final firstName =
         displayName.trim().isNotEmpty ? displayName.split(' ').first : '';
 
@@ -61,21 +65,17 @@ class DashboardScreen extends ConsumerWidget {
                   MaterialPageRoute(builder: (_) => const ProfileScreen()),
                 );
               },
-              child: CircleAvatar(
+              child: UserAvatar(
                 radius: 18,
-                foregroundImage:
-                    photoUrl != null ? NetworkImage(photoUrl) : null,
-                child: Text(
-                  (displayName.isNotEmpty ? displayName[0] : '?').toUpperCase(),
-                  style: const TextStyle(fontSize: 14),
-                ),
+                photoUrl: photoUrl,
+                fallbackText: displayName,
               ),
             ),
           ),
         ],
       ),
       body: tasksAsync.when(
-        loading: () => const AppLoadingScreen(message: 'Loading dashboard...'),
+        loading: () => const _DashboardSkeleton(),
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -415,4 +415,109 @@ Future<void> _showSubjectRequiredDialog(BuildContext context, WidgetRef ref) {
       ],
     ),
   );
+}
+
+class _DashboardSkeleton extends StatelessWidget {
+  const _DashboardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          width: 120,
+          height: 24,
+          margin: const EdgeInsets.only(bottom: 12, right: 200),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 50,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        height: 50,
+                        margin: const EdgeInsets.only(left: 8),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 100,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 80,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }

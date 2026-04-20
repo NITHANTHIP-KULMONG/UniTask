@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/preferences/app_preferences.dart';
 import '../../../shared/widgets/app_loading_screen.dart';
+import '../../../shared/widgets/custom_segmented_control.dart';
+import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/presentation/login_page.dart';
 import '../../auth/services/auth_service.dart';
 import '../../tasks/models/task.dart';
@@ -49,6 +51,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final appUserAsync = ref.watch(appUserProvider);
+    final authUser = ref.watch(authStateProvider).valueOrNull;
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final l10n = context.l10n;
@@ -56,18 +59,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.profileTitle)),
       body: appUserAsync.when(
-        loading: () => const AppLoadingScreen(message: 'Loading profile...'),
+        loading: () => AppLoadingScreen(message: l10n.profileLoading),
         error: (e, _) => Center(child: Text(l10n.profileLoadFailed('$e'))),
         data: (user) {
           if (user == null) return const SizedBox.shrink();
 
-          final photoUrl = _normalizePhotoUrl(
-            FirebaseAuth.instance.currentUser?.photoURL,
-          );
+          final photoUrl = _normalizePhotoUrl(user.photoUrl) ??
+              _normalizePhotoUrl(authUser?.photoURL);
 
-          final firebaseUser = ref.read(authServiceProvider).currentUser;
           final providerIds =
-              firebaseUser?.providerData.map((p) => p.providerId).toSet() ??
+              authUser?.providerData.map((p) => p.providerId).toSet() ??
                   const <String>{};
           final isGoogle = providerIds.contains('google.com');
 
@@ -81,18 +82,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      CircleAvatar(
+                      UserAvatar(
                         radius: 52,
+                        photoUrl: photoUrl,
+                        fallbackText: user.name,
+                        fallbackIcon: Icons.person,
                         backgroundColor: cs.surfaceContainerHighest,
-                        backgroundImage:
-                            photoUrl != null ? NetworkImage(photoUrl) : null,
-                        child: photoUrl == null
-                            ? Icon(
-                                Icons.person,
-                                size: 52,
-                                color: cs.onSurfaceVariant,
-                              )
-                            : null,
+                        foregroundColor: cs.onSurfaceVariant,
                       ),
                       const SizedBox(height: 16),
                       InkWell(
@@ -212,6 +208,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: Icons.timer_outlined,
                       label: l10n.profileStatStudyTime,
                       value: _formatDuration(
+                        context,
                         ref.watch(totalStudySecondsProvider),
                       ),
                     ),
@@ -269,12 +266,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  String _formatDuration(int totalSeconds) {
-    if (totalSeconds < 60) return '${totalSeconds}s';
+  String _formatDuration(BuildContext context, int totalSeconds) {
+    final l10n = context.l10n;
+    if (totalSeconds < 60) return l10n.profileDurationSeconds(totalSeconds);
     final hours = totalSeconds ~/ 3600;
     final minutes = (totalSeconds % 3600) ~/ 60;
-    if (hours > 0) return '${hours}h ${minutes}m';
-    return '${minutes}m';
+    if (hours > 0) return l10n.profileDurationHoursMinutes(hours, minutes);
+    return l10n.profileDurationMinutes(minutes);
   }
 
   String? _normalizePhotoUrl(String? value) {
@@ -364,16 +362,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (_) => const AlertDialog(
+        builder: (_) => AlertDialog(
           content: Row(
             children: [
-              SizedBox(
+              const SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2.2),
               ),
-              SizedBox(width: 12),
-              Expanded(child: Text('Deleting account...')),
+              const SizedBox(width: 12),
+              Expanded(child: Text(context.l10n.profileDeletingAccount)),
             ],
           ),
         ),
@@ -382,8 +380,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     try {
       await ref.read(authServiceProvider).deleteAccount();
-
-      // Ensure local session is cleared before redirecting.
       await ref.read(authServiceProvider).signOut();
 
       if (loadingShown && rootNavigator.mounted && rootNavigator.canPop()) {
@@ -391,7 +387,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
 
       if (!mounted) return;
-      _goToLoginWithMessage('ลบบัญชีเรียบร้อยแล้ว');
+      _goToLoginWithMessage(l10n.profileAccountDeleted);
     } on FirebaseAuthException catch (e) {
       if (loadingShown && rootNavigator.mounted && rootNavigator.canPop()) {
         rootNavigator.pop();
@@ -400,7 +396,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (e.code == 'requires-recent-login') {
         await ref.read(authServiceProvider).signOut();
         if (!mounted) return;
-        _goToLoginWithMessage('โปรดล็อกอินใหม่ก่อนลบบัญชีอีกครั้ง');
+        _goToLoginWithMessage(l10n.profileReauthBeforeDelete);
         return;
       }
 
@@ -448,7 +444,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
     } catch (e) {
       if (mounted) {
-        _showSnackBar('Sign out failed: $e');
+        _showSnackBar(context.l10n.profileSignOutFailed('$e'));
       }
     }
   }
@@ -536,10 +532,6 @@ class _ThemeModeTile extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
     final l10n = context.l10n;
     final isCompactWidth = MediaQuery.sizeOf(context).width < 420;
-    final segmentLabelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-          height: 1,
-          fontWeight: FontWeight.w600,
-        );
 
     final themeIcon = Icon(
       mode == ThemeMode.dark
@@ -555,51 +547,33 @@ class _ThemeModeTile extends ConsumerWidget {
       child: FittedBox(
         fit: BoxFit.scaleDown,
         alignment: Alignment.centerRight,
-        child: SegmentedButton<ThemeMode>(
-          segments: [
-            ButtonSegment(
-              value: ThemeMode.light,
-              icon: const Icon(Icons.light_mode, size: 18),
-              label: Text(
-                l10n.profileThemeLight,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.fade,
-              ),
+        child: CustomSegmentedControl<ThemeMode>(
+          groupValue: mode,
+          onValueChanged: (v) =>
+              ref.read(themeModeProvider.notifier).setThemeMode(v),
+          children: {
+            ThemeMode.light: Row(
+              children: [
+                const Icon(Icons.light_mode, size: 16),
+                const SizedBox(width: 6),
+                Text(l10n.profileThemeLight),
+              ],
             ),
-            ButtonSegment(
-              value: ThemeMode.system,
-              icon: const Icon(Icons.brightness_auto, size: 18),
-              label: Text(
-                l10n.profileThemeSystem,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.fade,
-              ),
+            ThemeMode.system: Row(
+              children: [
+                const Icon(Icons.brightness_auto, size: 16),
+                const SizedBox(width: 6),
+                Text(l10n.profileThemeSystem),
+              ],
             ),
-            ButtonSegment(
-              value: ThemeMode.dark,
-              icon: const Icon(Icons.dark_mode, size: 18),
-              label: Text(
-                l10n.profileThemeDark,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.fade,
-              ),
+            ThemeMode.dark: Row(
+              children: [
+                const Icon(Icons.dark_mode, size: 16),
+                const SizedBox(width: 6),
+                Text(l10n.profileThemeDark),
+              ],
             ),
-          ],
-          selected: {mode},
-          onSelectionChanged: (s) =>
-              ref.read(themeModeProvider.notifier).setThemeMode(s.first),
-          showSelectedIcon: false,
-          style: ButtonStyle(
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            textStyle: MaterialStatePropertyAll(segmentLabelStyle),
-            padding: const MaterialStatePropertyAll(
-              EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            ),
-          ),
+          },
         ),
       ),
     );
@@ -671,10 +645,13 @@ class _StudyDurationTile extends ConsumerWidget {
         onSelected: (v) => ref.read(pomodoroPrefsProvider.notifier).state =
             prefs.copyWith(workMinutes: v),
         itemBuilder: (_) => _options.map((m) {
-          return PopupMenuItem(value: m, child: Text('$m min'));
+          return PopupMenuItem(
+            value: m,
+            child: Text(l10n.profileMinutesOption(m)),
+          );
         }).toList(),
         child: Chip(
-          label: Text('${prefs.workMinutes}m'),
+          label: Text(l10n.profileMinutesShort(prefs.workMinutes)),
           side: BorderSide.none,
         ),
       ),
@@ -729,7 +706,13 @@ class _LanguageTile extends ConsumerWidget {
     final locale = ref.watch(appLocaleProvider);
     final l10n = context.l10n;
     final cs = Theme.of(context).colorScheme;
-    final current = locale.languageCode == 'th' ? 'th' : 'en';
+    final current = locale?.languageCode == 'th'
+        ? 'th'
+        : locale?.languageCode == 'en'
+            ? 'en'
+            : Localizations.localeOf(context).languageCode == 'th'
+                ? 'th'
+                : 'en';
 
     String labelForCode(String code) {
       return code == 'th' ? l10n.profileLanguageTh : l10n.profileLanguageEn;
@@ -738,15 +721,9 @@ class _LanguageTile extends ConsumerWidget {
     return ListTile(
       leading: Icon(Icons.public, color: cs.onSurface),
       title: Text(l10n.profileLanguage),
-      trailing: SegmentedButton<String>(
-        segments: const [
-          ButtonSegment<String>(value: 'en', label: Text('EN')),
-          ButtonSegment<String>(value: 'th', label: Text('TH')),
-        ],
-        selected: {current},
-        showSelectedIcon: false,
-        onSelectionChanged: (selection) {
-          final code = selection.first;
+      trailing: CustomSegmentedControl<String>(
+        groupValue: current,
+        onValueChanged: (code) {
           ref.read(appLocaleProvider.notifier).setLocale(Locale(code));
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -756,10 +733,10 @@ class _LanguageTile extends ConsumerWidget {
             ),
           );
         },
-        style: const ButtonStyle(
-          visualDensity: VisualDensity.compact,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
+        children: {
+          'en': Text(l10n.profileLanguageCodeEn),
+          'th': Text(l10n.profileLanguageCodeTh),
+        },
       ),
     );
   }

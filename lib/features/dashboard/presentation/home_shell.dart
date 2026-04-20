@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../subjects/presentation/subjects_screen.dart';
 import '../../timer/presentation/timer_screen.dart';
 import '../../tasks/presentation/assignments_tab.dart';
@@ -14,6 +15,7 @@ class HomeShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(selectedTabIndexProvider);
+    final l10n = context.l10n;
     void goToTasks() => ref.read(selectedTabIndexProvider.notifier).state = 1;
     final pages = <Widget>[
       DashboardScreen(goToTasks: goToTasks),
@@ -34,11 +36,23 @@ class HomeShell extends ConsumerWidget {
         onDestinationSelected: (i) {
           ref.read(selectedTabIndexProvider.notifier).state = i;
         },
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-          NavigationDestination(icon: Icon(Icons.checklist_outlined), label: 'Tasks'),
-          NavigationDestination(icon: Icon(Icons.timer_outlined), label: 'Timer'),
-          NavigationDestination(icon: Icon(Icons.book_outlined), label: 'Subjects'),
+        destinations: [
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            label: l10n.navDashboard,
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.checklist_outlined),
+            label: l10n.navTasks,
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.timer_outlined),
+            label: l10n.navTimer,
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.book_outlined),
+            label: l10n.navSubjects,
+          ),
         ],
       ),
     );

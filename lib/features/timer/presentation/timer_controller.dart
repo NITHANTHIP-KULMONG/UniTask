@@ -11,16 +11,18 @@ final timerRepositoryProvider = Provider<TimerRepository>((ref) {
   return const LocalTimerRepository();
 });
 
-final timerSessionsProvider =
-    StateNotifierProvider<TimerSessionsController, AsyncValue<List<TimerSession>>>(
+final timerSessionsProvider = StateNotifierProvider<TimerSessionsController,
+    AsyncValue<List<TimerSession>>>(
   (ref) => TimerSessionsController(ref.watch(timerRepositoryProvider)),
 );
 
-final timerRunProvider = StateNotifierProvider<TimerRunController, TimerRunState>(
+final timerRunProvider =
+    StateNotifierProvider<TimerRunController, TimerRunState>(
   (ref) => TimerRunController(ref),
 );
 
-class TimerSessionsController extends StateNotifier<AsyncValue<List<TimerSession>>> {
+class TimerSessionsController
+    extends StateNotifier<AsyncValue<List<TimerSession>>> {
   TimerSessionsController(this._repository) : super(const AsyncLoading()) {
     load();
   }
@@ -32,9 +34,11 @@ class TimerSessionsController extends StateNotifier<AsyncValue<List<TimerSession
     state = await AsyncValue.guard(_repository.getAll);
   }
 
-  Future<void> addSession(TimerSession s) async => _mutate(() => _repository.add(s));
+  Future<void> addSession(TimerSession s) async =>
+      _mutate(() => _repository.add(s));
 
-  Future<void> deleteById(String id) async => _mutate(() => _repository.delete(id));
+  Future<void> deleteById(String id) async =>
+      _mutate(() => _repository.delete(id));
 
   Future<void> clear() async => _mutate(_repository.clear);
 
@@ -76,8 +80,9 @@ class TimerRunState {
     bool clearLastTickAt = false,
   }) {
     return TimerRunState(
-      selectedSubject:
-          clearSelectedSubject ? null : (selectedSubject ?? this.selectedSubject),
+      selectedSubject: clearSelectedSubject
+          ? null
+          : (selectedSubject ?? this.selectedSubject),
       isRunning: isRunning ?? this.isRunning,
       isPaused: isPaused ?? this.isPaused,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,

@@ -66,5 +66,4 @@ class DefaultFirebaseOptions {
     projectId: 'unitask-d448b',
     storageBucket: 'unitask-d448b.firebasestorage.app',
   );
-
 }

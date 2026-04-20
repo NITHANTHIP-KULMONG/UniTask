@@ -5,7 +5,7 @@ abstract final class AppTheme {
   static const Color primary = Color(0xFF3B82F6); // Blue
   static const Color secondary = Color(0xFF14B8A6); // Teal
   static const Color accent = Color(0xFF0EA5E9);
-  
+
   // Light Mode Colors
   static const Color backgroundLight = Color(0xFFF7F9FC);
   static const Color surfaceLight = Color(0xFFFFFFFF);
@@ -120,6 +120,14 @@ abstract final class AppTheme {
           fontWeight: FontWeight.w600,
           letterSpacing: 0.2,
         ),
+        labelMedium: baseTextTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
+        ),
+        labelSmall: baseTextTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
+        ),
       ),
       appBarTheme: AppBarTheme(
         centerTitle: true,
@@ -149,7 +157,8 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceLight,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
           borderSide: BorderSide(color: _lightColorScheme.outline),
@@ -314,12 +323,70 @@ abstract final class AppTheme {
       ),
     );
 
+    final baseTextTheme = GoogleFonts.interTextTheme(base.textTheme);
+
     return base.copyWith(
       iconTheme: IconThemeData(color: base.colorScheme.onSurfaceVariant),
       primaryIconTheme: IconThemeData(color: base.colorScheme.onSurface),
-      textTheme: GoogleFonts.interTextTheme(base.textTheme),
+      textTheme: baseTextTheme.copyWith(
+        headlineLarge: baseTextTheme.headlineLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
+          color: textPrimaryDark,
+        ),
+        headlineMedium: baseTextTheme.headlineMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.4,
+          color: textPrimaryDark,
+        ),
+        headlineSmall: baseTextTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: textPrimaryDark,
+        ),
+        titleLarge: baseTextTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: textPrimaryDark,
+        ),
+        titleMedium: baseTextTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: textPrimaryDark,
+        ),
+        titleSmall: baseTextTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: textPrimaryDark,
+        ),
+        bodyLarge: baseTextTheme.bodyLarge?.copyWith(
+          color: textPrimaryDark,
+          height: 1.45,
+          fontWeight: FontWeight.w400,
+        ),
+        bodyMedium: baseTextTheme.bodyMedium?.copyWith(
+          color: textSecondaryDark,
+          height: 1.45,
+          fontWeight: FontWeight.w400,
+        ),
+        bodySmall: baseTextTheme.bodySmall?.copyWith(
+          color: textSecondaryDark,
+          height: 1.45,
+          fontWeight: FontWeight.w400,
+        ),
+        labelLarge: baseTextTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
+        ),
+        labelMedium: baseTextTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
+        ),
+        labelSmall: baseTextTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
+        ),
+      ),
       appBarTheme: AppBarTheme(
         centerTitle: true,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         backgroundColor: base.colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         iconTheme: IconThemeData(color: base.colorScheme.onSurface),
@@ -341,26 +408,118 @@ abstract final class AppTheme {
                 : base.colorScheme.onSurfaceVariant,
           );
         }),
+        labelTextStyle: WidgetStateProperty.all(
+          GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: base.colorScheme.surfaceContainerHighest,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: BorderSide(color: _darkColorScheme.outline),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: BorderSide(color: _darkColorScheme.outline),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: const BorderSide(color: primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: const BorderSide(color: Color(0xFFEF4444)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          elevation: 2,
+          shadowColor: primary.withValues(alpha: 0.2),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          minimumSize: const Size(double.infinity, 56),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusMd),
+          ),
+          textStyle: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(double.infinity, 52),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMd),
           ),
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          textStyle: GoogleFonts.inter(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(double.infinity, 52),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusMd),
+          ),
+          side: BorderSide(color: _darkColorScheme.outline),
+          textStyle: GoogleFonts.inter(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          textStyle: GoogleFonts.inter(
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.1,
+          ),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: base.colorScheme.surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusLg),
+          side: BorderSide(color: _darkColorScheme.outlineVariant),
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        textColor: textPrimaryDark,
+        iconColor: textSecondaryDark,
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: textPrimaryDark,
+        ),
+        subtitleTextStyle: GoogleFonts.inter(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: textSecondaryDark,
         ),
       ),
       cardTheme: CardThemeData(
+        elevation: 1,
+        margin: EdgeInsets.zero,
+        color: base.colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: primary.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusLg),
+          side: BorderSide(color: _darkColorScheme.outlineVariant, width: 0.5),
         ),
       ),
     );

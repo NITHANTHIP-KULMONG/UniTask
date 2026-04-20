@@ -176,8 +176,7 @@ class PomodoroController extends StateNotifier<PomodoroState> {
 
       final completed = state.completedPomodoros + 1;
       final prefs = _ref.read(pomodoroPrefsProvider);
-      final isLongBreak =
-          completed % prefs.sessionsBeforeLongBreak == 0;
+      final isLongBreak = completed % prefs.sessionsBeforeLongBreak == 0;
 
       final breakPhase =
           isLongBreak ? PomodoroPhase.longBreak : PomodoroPhase.shortBreak;

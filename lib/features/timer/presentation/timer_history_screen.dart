@@ -1,6 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../subjects/domain/subject.dart';
 import '../../subjects/presentation/subject_controller.dart';
 import '../domain/study_session.dart';
@@ -13,6 +14,7 @@ class TimerHistoryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionsAsync = ref.watch(userStudySessionsProvider);
     final subjectsAsync = ref.watch(userSubjectsProvider);
+    final l10n = context.l10n;
 
     final subjects = subjectsAsync.valueOrNull ?? <Subject>[];
     final subjectNameById = <String, String>{
@@ -21,7 +23,7 @@ class TimerHistoryScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Session History'),
+        title: Text(l10n.timerHistoryTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -37,14 +39,13 @@ class TimerHistoryScreen extends ConsumerWidget {
         ),
         data: (sessions) {
           // Only show work sessions in the history.
-          final workSessions = sessions
-              .where((s) => s.sessionType == SessionType.work)
-              .toList();
+          final workSessions =
+              sessions.where((s) => s.sessionType == SessionType.work).toList();
 
           if (workSessions.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                'No study sessions yet.\nComplete a Pomodoro to see history.',
+                l10n.timerHistoryEmpty,
                 textAlign: TextAlign.center,
               ),
             );
@@ -84,23 +85,25 @@ class TimerHistoryScreen extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            '${items.length} sessions • ${_fmtDuration(totalSecs)}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
+                            l10n.timerHistorySummary(
+                              items.length,
+                              _fmtDuration(context, totalSecs),
+                            ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
                           ),
                         ],
                       ),
                     ),
                     ...items.map(
                       (session) {
-                        final subjectName = subjectNameById[session.subjectId] ??
-                            'Unknown subject';
+                        final subjectName =
+                            subjectNameById[session.subjectId] ??
+                                l10n.timerHistoryUnknownSubject;
                         final startTime = _fmtTime(session.startAt);
                         final duration =
                             _fmtDurationShort(session.durationSeconds);
@@ -165,7 +168,10 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
+            FilledButton(
+              onPressed: onRetry,
+              child: Text(context.l10n.commonRetry),
+            ),
           ],
         ),
       ),
@@ -186,12 +192,13 @@ String _fmtTime(DateTime d) {
   return '$h:$m';
 }
 
-String _fmtDuration(int totalSeconds) {
+String _fmtDuration(BuildContext context, int totalSeconds) {
+  final l10n = context.l10n;
   final safe = totalSeconds.clamp(0, 999999);
   final h = safe ~/ 3600;
   final m = (safe % 3600) ~/ 60;
-  if (h > 0) return '${h}h ${m}m';
-  return '${m}m';
+  if (h > 0) return l10n.timerDurationHoursMinutes(h, m);
+  return l10n.timerDurationMinutesOnly(m);
 }
 
 String _fmtDurationShort(int totalSeconds) {
@@ -200,4 +207,3 @@ String _fmtDurationShort(int totalSeconds) {
   final s = (safe % 60).toString().padLeft(2, '0');
   return '$m:$s';
 }
-

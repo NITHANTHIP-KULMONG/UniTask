@@ -50,9 +50,9 @@ const _localePrefKey = 'app_locale_code';
 
 /// App language selection persisted locally.
 ///
-/// Defaults to English and supports only English/Thai per product UX.
-class LocaleController extends StateNotifier<Locale> {
-  LocaleController() : super(const Locale('en')) {
+/// Defaults to System language and supports English/Thai per product UX.
+class LocaleController extends StateNotifier<Locale?> {
+  LocaleController() : super(null) {
     _loadSavedLocale();
   }
 
@@ -63,17 +63,23 @@ class LocaleController extends StateNotifier<Locale> {
     state = Locale(code);
   }
 
-  Future<void> setLocale(Locale locale) async {
-    if (state.languageCode == locale.languageCode) return;
-    if (locale.languageCode != 'en' && locale.languageCode != 'th') return;
+  Future<void> setLocale(Locale? locale) async {
+    if (state?.languageCode == locale?.languageCode) return;
+    if (locale != null &&
+        locale.languageCode != 'en' &&
+        locale.languageCode != 'th') return;
 
     state = locale;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_localePrefKey, locale.languageCode);
+    if (locale == null) {
+      await prefs.remove(_localePrefKey);
+    } else {
+      await prefs.setString(_localePrefKey, locale.languageCode);
+    }
   }
 }
 
-final appLocaleProvider = StateNotifierProvider<LocaleController, Locale>((
+final appLocaleProvider = StateNotifierProvider<LocaleController, Locale?>((
   ref,
 ) {
   return LocaleController();

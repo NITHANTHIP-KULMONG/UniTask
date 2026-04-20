@@ -1,4 +1,4 @@
-﻿class TimerSession {
+class TimerSession {
   final String id;
   final String subjectId;
   final DateTime startAt;
@@ -47,7 +47,9 @@
       id: json['id'] as String,
       subjectId: json['subjectId'] as String,
       startAt: DateTime.parse(json['startAt'] as String),
-      endAt: json['endAt'] == null ? null : DateTime.parse(json['endAt'] as String),
+      endAt: json['endAt'] == null
+          ? null
+          : DateTime.parse(json['endAt'] as String),
       durationSeconds: json['durationSeconds'] as int,
     );
   }

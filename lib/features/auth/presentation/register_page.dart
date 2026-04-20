@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_card.dart';
 import '../../../shared/widgets/custom_text_field.dart';
@@ -30,6 +31,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   Future<void> _handleSignUp() async {
+    final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -43,7 +45,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     } on FirebaseAuthException catch (e) {
       _showError(_mapErrorCode(e.code));
     } catch (_) {
-      _showError('An unexpected error occurred. Please try again.');
+      _showError(l10n.authUnexpected);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -57,14 +59,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   String _mapErrorCode(String code) {
+    final l10n = context.l10n;
     return switch (code) {
-      'weak-password' => 'Password is too weak. Use at least 6 characters.',
-      'email-already-in-use' =>
-        'An account with this email already exists.',
-      'invalid-email' => 'The email address is not valid.',
+      'weak-password' => l10n.registerErrorWeakPassword,
+      'email-already-in-use' => l10n.registerErrorEmailAlreadyInUse,
+      'invalid-email' => l10n.authErrorInvalidEmail,
       'operation-not-allowed' =>
-        'Email/password sign-up is disabled in the Firebase Console.',
-      _ => 'Registration failed ($code). Please try again.',
+        l10n.registerErrorOperationNotAllowed,
+      _ => l10n.registerErrorFailed(code),
     };
   }
 
@@ -72,6 +74,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   Widget build(BuildContext context) {
     final tt = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
 
     return Scaffold(
       body: DecoratedBox(
@@ -114,32 +117,33 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            'Create your account',
+                            l10n.registerTitle,
                             textAlign: TextAlign.center,
                             style: tt.headlineSmall,
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Set up your UniTask workspace in under a minute.',
+                            l10n.registerSubtitle,
                             textAlign: TextAlign.center,
                             style: tt.bodyMedium,
                           ),
                           const SizedBox(height: 24),
                           CustomTextField(
                             controller: _emailCtrl,
-                            label: 'Email',
-                            hintText: 'name@university.edu',
-                            prefixIcon: const Icon(Icons.alternate_email_rounded),
+                            label: l10n.authEmailLabel,
+                            hintText: l10n.authEmailHintAcademic,
+                            prefixIcon:
+                                const Icon(Icons.alternate_email_rounded),
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
                             autofillHints: const [AutofillHints.email],
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Email is required.';
+                                return l10n.authEmailRequired;
                               }
                               if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
                                   .hasMatch(value.trim())) {
-                                return 'Enter a valid email address.';
+                                return l10n.authEmailInvalid;
                               }
                               return null;
                             },
@@ -147,18 +151,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                           const SizedBox(height: 16),
                           CustomTextField(
                             controller: _passwordCtrl,
-                            label: 'Password',
-                            hintText: 'At least 6 characters',
+                            label: l10n.authPasswordLabel,
+                            hintText: l10n.registerPasswordHint,
                             prefixIcon: const Icon(Icons.lock_outline_rounded),
                             obscureText: true,
                             textInputAction: TextInputAction.next,
                             autofillHints: const [AutofillHints.newPassword],
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Password is required.';
+                                return l10n.authPasswordRequired;
                               }
                               if (value.trim().length < 6) {
-                                return 'Password must be at least 6 characters.';
+                                return l10n.authPasswordMinLength;
                               }
                               return null;
                             },
@@ -166,25 +170,25 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                           const SizedBox(height: 16),
                           CustomTextField(
                             controller: _confirmCtrl,
-                            label: 'Confirm password',
-                            hintText: 'Re-enter your password',
+                            label: l10n.registerConfirmPasswordLabel,
+                            hintText: l10n.registerConfirmPasswordHint,
                             prefixIcon: const Icon(Icons.lock_person_outlined),
                             obscureText: true,
                             textInputAction: TextInputAction.done,
                             onFieldSubmitted: (_) => _handleSignUp(),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Please confirm your password.';
+                                return l10n.registerConfirmPasswordRequired;
                               }
                               if (value.trim() != _passwordCtrl.text.trim()) {
-                                return 'Passwords do not match.';
+                                return l10n.registerConfirmPasswordMismatch;
                               }
                               return null;
                             },
                           ),
                           const SizedBox(height: 20),
                           CustomButton(
-                            label: 'Create account',
+                            label: l10n.registerCreateAccount,
                             onPressed: _handleSignUp,
                             isLoading: _isLoading,
                             icon: Icons.person_add_alt_1_rounded,
@@ -192,7 +196,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                           const SizedBox(height: 10),
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Already have an account? Login'),
+                            child: Text(l10n.registerAlreadyHaveAccount),
                           ),
                         ],
                       ),

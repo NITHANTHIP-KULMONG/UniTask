@@ -40,7 +40,8 @@ class StudySession {
 
   // ── Firestore serialisation ──────────────────────────────────────
 
-  factory StudySession.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+  factory StudySession.fromFirestore(
+      DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data()!;
     return StudySession(
       id: doc.id,
